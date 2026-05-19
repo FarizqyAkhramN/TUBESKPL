@@ -1,7 +1,6 @@
 ﻿using PROJECTKPL.API.Models;
 using FluentValidation;
 using FluentValidation.Results;
-using System.ComponentModel.DataAnnotations;
 
 namespace PROJECTKPL.API.Validators
 {

@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PROJECTKPL.API.Data;
 using PROJECTKPL.API.Models;
+using PROJECTKPL.API.Validators;
 
 namespace PROJECTKPL.API.Controllers
 {
