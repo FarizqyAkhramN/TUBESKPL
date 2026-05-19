@@ -83,54 +83,6 @@ namespace PROJECTKPL.CONSOLE.Menus
                 }
             }
         }
-        private async Task MenuPesanObat()
-        {
-            // Tampilkan daftar obat dulu agar user tahu Id obat
-            var obatList = await _obatService.GetAllAsync();
-            System.Console.WriteLine("\n===== DAFTAR OBAT =====");
-            _obatService.PrintList(obatList);
-            if (obatList.Count == 0) return;
-
-            System.Console.Write("\nId Obat         : ");
-            if (!int.TryParse(System.Console.ReadLine(), out int obatId))
-            {
-                System.Console.WriteLine("[ERROR] Input tidak valid.");
-                return;
-            }
-
-            System.Console.Write("Jumlah          : ");
-            if (!int.TryParse(System.Console.ReadLine(), out int jumlah) || jumlah <= 0)
-            {
-                System.Console.WriteLine("[ERROR] Jumlah tidak valid.");
-                return;
-            }
-
-            System.Console.WriteLine("Metode Pengambilan:");
-            System.Console.WriteLine("[1] Langsung");
-            System.Console.WriteLine("[2] Diantar");
-            System.Console.Write("Pilih: ");
-            string pilihanMetode = System.Console.ReadLine() ?? "";
-            string metode = pilihanMetode switch
-            {
-                "1" => "Langsung",
-                "2" => "Diantar",
-                _ => ""
-            };
-            if (metode == "")
-            {
-                System.Console.WriteLine("[ERROR] Pilihan metode tidak valid.");
-                return;
-            }
-
-            System.Console.Write("Pembayaran (Rp) : ");
-            if (!int.TryParse(System.Console.ReadLine(), out int pembayaran) || pembayaran <= 0)
-            {
-                System.Console.WriteLine("[ERROR] Nominal pembayaran tidak valid.");
-                return;
-            }
-
-            await _pesananService.BuatPesananAsync(_pelangganId, obatId, jumlah, metode, pembayaran);
-        }
 
     }
 }
