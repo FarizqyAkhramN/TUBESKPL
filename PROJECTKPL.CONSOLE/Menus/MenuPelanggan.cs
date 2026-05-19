@@ -10,7 +10,7 @@ namespace PROJECTKPL.CONSOLE.Menus
     {
         private readonly ObatService _obatService;
         private readonly PelangganService _pelangganService;
-        private readonly Pesanan  _pesananService;
+        private readonly PesananService _pesananService;
 
         // Data pelanggan yang sedang login (dari response API)
         private readonly int _pelangganId;
@@ -79,6 +79,9 @@ namespace PROJECTKPL.CONSOLE.Menus
                     default:
                         System.Console.WriteLine("[ERROR] Pilihan tidak valid.");
                         break;
-                
+
+                }
             }
+        }
+    }
 }
