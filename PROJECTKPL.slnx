@@ -1,1 +1,4 @@
-<Solution />
+<Solution>
+  <Project Path="PROJECTKPL.API/PROJECTKPL.API.csproj" />
+  <Project Path="PROJECTKPL.CONSOLE/PROJECTKPL.CONSOLE.csproj" />
+</Solution>
