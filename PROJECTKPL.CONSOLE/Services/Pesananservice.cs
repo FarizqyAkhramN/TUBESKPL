@@ -3,66 +3,36 @@ using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using PROJECTKPL.API.Models;
 
 namespace PROJECTKPL.CONSOLE.Services
 {
-    public class PesananService
+    public class PesananService : BaseService<JsonElement>
     {
-        private readonly HttpClient _http;
-        private readonly JsonSerializerOptions _json;
+        public PesananService(HttpClient http) : base(http) { }
 
-        public PesananService(HttpClient http)
-        {
-            _http = http;
-            _json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        }
+        public async Task<ApiResponse<List<JsonElement>>> GetAllAsync()
+            => await GetListAsync("api/pesanan");
 
-        public async Task<List<JsonElement>> GetAllAsync()
-        {
-            var res = await _http.GetAsync("api/pesanan");
-            if (!res.IsSuccessStatusCode) return new();
-            var list = await res.Content.ReadFromJsonAsync<List<JsonElement>>(_json);
-            return list ?? new();
-        }
-
-        public async Task<List<JsonElement>> GetByPelangganAsync(int pelangganId)
-        {
-            var res = await _http.GetAsync($"api/pesanan/pelanggan/{pelangganId}");
-            if (!res.IsSuccessStatusCode) return new();
-            var list = await res.Content.ReadFromJsonAsync<List<JsonElement>>(_json);
-            return list ?? new();
-        }
+        public async Task<ApiResponse<List<JsonElement>>> GetByPelangganAsync(int pelangganId)
+            => await GetListAsync($"api/pesanan/pelanggan/{pelangganId}");
 
         public async Task BuatPesananAsync(int pelangganId, int obatId, int jumlah, string metode, int pembayaran)
         {
-            var res = await _http.PostAsJsonAsync("api/pesanan", new
-            {
-                pelangganId,
-                obatId,
-                jumlah,
-                metodePengambilan = metode,
-                pembayaran
-            });
-            string msg = await res.Content.ReadAsStringAsync();
-            System.Console.WriteLine(res.IsSuccessStatusCode
-                ? "Pesanan berhasil dibuat."
-                : $"[ERROR] {msg}");
+            var result = await PostAsync("api/pesanan", new { pelangganId, obatId, jumlah, metodePengambilan = metode, pembayaran });
+            System.Console.WriteLine(result.Success ? "Pesanan berhasil dibuat." : $"[ERROR] {result.Message}");
         }
 
         public async Task AktifkanTriggerAsync(int pesananId, string trigger)
         {
-            var res = await _http.PutAsJsonAsync($"api/pesanan/{pesananId}/trigger", new { trigger });
-            string msg = await res.Content.ReadAsStringAsync();
-            System.Console.WriteLine(res.IsSuccessStatusCode
-                ? $"Status berhasil diperbarui."
-                : $"[ERROR] {msg}");
+            var result = await PutAsync($"api/pesanan/{pesananId}/trigger", new { trigger });
+            System.Console.WriteLine(result.Success ? "Status berhasil diperbarui." : $"[ERROR] {result.Message}");
         }
 
         public async Task HapusAsync(int id)
         {
-            var res = await _http.DeleteAsync($"api/pesanan/{id}");
-            string msg = await res.Content.ReadAsStringAsync();
-            System.Console.WriteLine(res.IsSuccessStatusCode ? msg : $"[ERROR] {msg}");
+            var result = await DeleteAsync($"api/pesanan/{id}");
+            System.Console.WriteLine(result.Success ? result.Data : $"[ERROR] {result.Message}");
         }
 
         public void PrintList(List<JsonElement> list, string header = "DAFTAR PESANAN")
