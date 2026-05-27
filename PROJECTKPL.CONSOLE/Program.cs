@@ -13,7 +13,6 @@ var pesananService = new PesananService(http);
 const string ADMIN_USERNAME = "admin";
 const string ADMIN_PASSWORD = "admin123";
 
-// ── Menu Utama ──────────────────────────────────────────────────────────────
 bool running = true;
 while (running)
 {
@@ -29,30 +28,19 @@ while (running)
 
     switch (pilihan)
     {
-        case "1":
-            await LoginPramuniaga();
-            break;
-
-        case "2":
-            await LoginPelanggan();
-            break;
-
-        case "3":
-            await DaftarPelanggan();
-            break;
-
+        case "1": await LoginPramuniaga(); break;
+        case "2": await LoginPelanggan(); break;
+        case "3": await DaftarPelanggan(); break;
         case "0":
             Console.WriteLine("Terima kasih. Sampai jumpa!");
             running = false;
             break;
-
         default:
             Console.WriteLine("[ERROR] Pilihan tidak valid.");
             break;
     }
 }
 
-// ── Login Pramuniaga ────────────────────────────────────────────────────────
 async Task LoginPramuniaga()
 {
     Console.WriteLine("\n--- Login Pramuniaga ---");
@@ -67,12 +55,15 @@ async Task LoginPramuniaga()
         return;
     }
 
-    Console.WriteLine($"\nSelamat datang, {username}!");
-    var menu = new MenuPramuniaga(obatService, pelangganService, pesananService);
+    // Runtime Configuration: load konfigurasi menu berdasarkan role Pramuniaga
+    var config = new AppConfig();
+    config.Load(RoleUser.Pramuniaga, username);
+
+    Console.WriteLine($"Selamat datang, {username}!");
+    var menu = new MenuPramuniaga(obatService, pelangganService, pesananService, config);
     await menu.TampilAsync();
 }
 
-// ── Login Pelanggan ─────────────────────────────────────────────────────────
 async Task LoginPelanggan()
 {
     Console.WriteLine("\n--- Login Pelanggan ---");
@@ -81,17 +72,21 @@ async Task LoginPelanggan()
     Console.Write("Password    : ");
     string password = Console.ReadLine() ?? "";
 
-    var pelangganData = await pelangganService.LoginAsync(noTelp, password);
-    if (pelangganData == null)
+    var result = await pelangganService.LoginAsync(noTelp, password);
+    if (!result.Success)
     {
         Console.WriteLine("[ERROR] No. telepon atau password salah.");
         return;
     }
 
-    string username = pelangganData.Value.GetProperty("username").GetString() ?? "";
-    Console.WriteLine($"\nSelamat datang, {username}!");
+    string namaUser = result.Data!.GetProperty("username").GetString() ?? "";
 
-    var menu = new MenuPelanggan(obatService, pelangganService, pesananService, pelangganData.Value);
+    // Runtime Configuration: load konfigurasi menu berdasarkan role Pelanggan
+    var config = new AppConfig();
+    config.Load(RoleUser.Pelanggan, namaUser);
+
+    Console.WriteLine($"Selamat datang, {namaUser}!");
+    var menu = new MenuPelanggan(obatService, pelangganService, pesananService, result.Data!, config);
     await menu.TampilAsync();
 }
 
