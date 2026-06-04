@@ -8,12 +8,12 @@ namespace PROJECTKPL.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ObatControllers : ControllerBase
+    public class ObatController : ControllerBase
     {
         private readonly AppDbContext _db;
         private readonly ObatValidator _validator = new();
 
-        public ObatControllers(AppDbContext db)
+        public ObatController(AppDbContext db)
         {
             _db = db;
         }
