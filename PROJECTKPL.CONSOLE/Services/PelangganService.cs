@@ -20,9 +20,24 @@ namespace PROJECTKPL.CONSOLE.Services
         public async Task TambahAsync(string username, string gender, string noTelp, int umur, string password)
         {
             var result = await PostAsync("api/pelanggan", new { username, gender, noTelp, umur, password });
-            System.Console.WriteLine(result.Success
-                ? $"Pelanggan '{username}' berhasil didaftarkan."
-                : $"[ERROR] {result.Message}");
+            if (result.Success)
+            {
+                System.Console.WriteLine($"Pelanggan '{username}' berhasil didaftarkan.");
+            }
+            else
+            {
+                try
+                {
+                    var errors = System.Text.Json.JsonSerializer.Deserialize<List<System.Text.Json.JsonElement>>(result.Message);
+                    System.Console.WriteLine("[ERROR] Validasi gagal:");
+                    foreach (var e in errors!)
+                        System.Console.WriteLine($"  - {e.GetProperty("errorMessage").GetString()}");
+                }
+                catch
+                {
+                    System.Console.WriteLine($"[ERROR] {result.Message}");
+                }
+            }
         }
 
         public async Task GantiPasswordAsync(int id, string noTelp, string passwordBaru)
