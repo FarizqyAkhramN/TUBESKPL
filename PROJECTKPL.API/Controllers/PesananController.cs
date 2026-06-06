@@ -15,7 +15,7 @@ namespace PROJECTKPL.API.Controllers
         public PesananController(AppDbContext db)
         {
             _db = db;
-        }
+        }   
 
         // GET api/pesanan
         [HttpGet]
@@ -62,6 +62,10 @@ namespace PROJECTKPL.API.Controllers
 
             var pelanggan = await _db.Pelanggan.FindAsync(req.PelangganId);
             if (pelanggan == null) return NotFound($"Pelanggan id {req.PelangganId} tidak ditemukan.");
+
+            int totalHarga = obat.Harga * req.Jumlah;
+            if (req.Pembayaran < totalHarga)
+                return BadRequest($"Pembayaran kurang. Total harga: Rp{totalHarga}, pembayaran: Rp{req.Pembayaran}.");
 
             var pesanan = new Pesanan
             {
