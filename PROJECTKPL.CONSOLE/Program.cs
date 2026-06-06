@@ -1,10 +1,11 @@
-﻿using PROJECTKPL.CONSOLE.Menus;
+﻿using PROJECTKPL.CONSOLE.Config;
+using PROJECTKPL.CONSOLE.Menus;
 using PROJECTKPL.CONSOLE.Services;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-var http = new HttpClient { BaseAddress = new Uri("http://localhost:5252/") };
+var http = new HttpClient { BaseAddress = new Uri("http://localhost:5188/") };
 
 var obatService = new ObatService(http);
 var pelangganService = new PelangganService(http);
