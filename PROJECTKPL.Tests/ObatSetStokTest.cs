@@ -8,7 +8,6 @@ namespace PROJECTKPL.Tests
     [TestClass]
     public class ObatSetStokTest
     {
-        // ── Status berdasarkan stok ───────────────────────────────────────
         [TestMethod]
         public void SetStok_Nol_StatusJadiHabis()
         {
@@ -53,7 +52,6 @@ namespace PROJECTKPL.Tests
             Assert.AreEqual(StatusObat.Tersedia, obat.StatusObat);
         }
 
-        // ── Status awal saat konstruksi ───────────────────────────────────
         [TestMethod]
         public void Constructor_StokNol_StatusLangsungHabis()
         {
@@ -75,7 +73,6 @@ namespace PROJECTKPL.Tests
             Assert.AreEqual(StatusObat.Tersedia, obat.StatusObat);
         }
 
-        // ── Perubahan status dinamis ──────────────────────────────────────
         [TestMethod]
         public void SetStok_DariTersediaKeHabis_StatusBerubah()
         {

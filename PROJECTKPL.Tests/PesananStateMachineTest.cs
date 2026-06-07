@@ -36,7 +36,6 @@ namespace PROJECTKPL.Tests
             };
         }
 
-        // ── Transisi valid ────────────────────────────────────────────────
         [TestMethod]
         public void Konfirmasi_DariKeranjang_StatusJadiDiproses()
         {
@@ -86,7 +85,6 @@ namespace PROJECTKPL.Tests
             Assert.AreEqual(StatusPesanan.Dibatalkan, pesanan.Status);
         }
 
-        // ── Transisi tidak valid ──────────────────────────────────────────
         [TestMethod]
         public void Siapkan_DariKeranjang_ReturnNull()
         {
