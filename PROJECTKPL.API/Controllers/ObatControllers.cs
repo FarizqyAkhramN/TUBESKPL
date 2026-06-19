@@ -18,6 +18,7 @@ namespace PROJECTKPL.API.Controllers
             _db = db;
         }
 
+        // manggil seluruh data obat dari database
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -25,6 +26,7 @@ namespace PROJECTKPL.API.Controllers
             return Ok(obat);
         }
 
+        // ambil satu data obat berdasarkan id
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -33,6 +35,7 @@ namespace PROJECTKPL.API.Controllers
             return Ok(obat);
         }
 
+        // add data obat baru ke database
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ObatRequest req)
         {
@@ -51,6 +54,7 @@ namespace PROJECTKPL.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = obat.Id }, obat);
         }
 
+        // mengubah stok obat
         [HttpPut("{id}/stok")]
         public async Task<IActionResult> EditStok(int id, [FromBody] EditStokRequest req)
         {
@@ -70,6 +74,7 @@ namespace PROJECTKPL.API.Controllers
             return Ok(obat);
         }
 
+        // hapus data obat berdasarkan id
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -82,6 +87,7 @@ namespace PROJECTKPL.API.Controllers
         }
     }
 
+    // menerima request service
     public record ObatRequest(string NamaObat, int Stok, int Harga);
     public record EditStokRequest(int StokBaru);
 
