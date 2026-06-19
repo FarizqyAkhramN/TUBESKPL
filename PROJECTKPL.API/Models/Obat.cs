@@ -15,6 +15,9 @@ namespace PROJECTKPL.API.Models
         public int Id { get; set; }
 
         [Required]
+        private const int BATAS_HAMPIR_HABIS = 10;
+
+        [Required]
         public string NamaObat { get; set; } = string.Empty;
 
         public int Stok { get; set; }
@@ -24,6 +27,7 @@ namespace PROJECTKPL.API.Models
         public int Harga { get; set; }
 
         public Obat() { }
+
 
         public Obat(string namaObat, int stok, int harga)
         {
@@ -36,7 +40,7 @@ namespace PROJECTKPL.API.Models
         private static readonly (int BatasAtas, StatusObat Status)[] TabelStatus =
         {
             (0,  StatusObat.Habis),
-            (10, StatusObat.HampirHabis),
+            (BATAS_HAMPIR_HABIS, StatusObat.HampirHabis),
             (int.MaxValue, StatusObat.Tersedia),
         };
 
