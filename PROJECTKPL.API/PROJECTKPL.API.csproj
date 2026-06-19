@@ -9,13 +9,18 @@
   <ItemGroup>
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
+<<<<<<< HEAD
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+=======
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
+>>>>>>> 446ef87f3a8d6cbca120211650131dd842d45c45
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.14.14" />
   </ItemGroup>
 
 </Project>
