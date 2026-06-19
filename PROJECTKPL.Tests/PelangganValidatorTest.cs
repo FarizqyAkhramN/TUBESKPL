@@ -20,7 +20,6 @@ namespace PROJECTKPL.Tests
             Password = "Budi123"
         };
 
-        // ── Username ──────────────────────────────────────────────────────
         [TestMethod]
         public void Username_Valid_LolosValidasi()
         {
@@ -47,7 +46,6 @@ namespace PROJECTKPL.Tests
             Assert.IsFalse(result.IsValid);
         }
 
-        // ── Gender ────────────────────────────────────────────────────────
         [TestMethod]
         public void Gender_LakiLaki_LolosValidasi()
         {
@@ -84,7 +82,6 @@ namespace PROJECTKPL.Tests
             Assert.IsFalse(result.IsValid);
         }
 
-        // ── NoTelp ────────────────────────────────────────────────────────
         [TestMethod]
         public void NoTelp_Valid_LolosValidasi()
         {
@@ -112,7 +109,6 @@ namespace PROJECTKPL.Tests
             Assert.IsFalse(result.IsValid);
         }
 
-        // ── Password ──────────────────────────────────────────────────────
         [TestMethod]
         public void Password_Valid_LolosValidasi()
         {
@@ -149,7 +145,6 @@ namespace PROJECTKPL.Tests
             Assert.IsFalse(result.IsValid);
         }
 
-        // ── Validasi semua ruleset sekaligus ──────────────────────────────
         [TestMethod]
         public void ValidateAll_DataValid_LolosSemuaRuleset()
         {

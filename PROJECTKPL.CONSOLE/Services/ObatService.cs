@@ -11,9 +11,11 @@ namespace PROJECTKPL.CONSOLE.Services
     {
         public ObatService(HttpClient http) : base(http) { }
 
+        // request ambil semua data obat.
         public async Task<ApiResponse<List<JsonElement>>> GetAllAsync()
             => await GetListAsync("api/obat");
 
+        // request tambah data obat baru 
         public async Task<ApiResponse<JsonElement>> TambahAsync(string namaObat, int stok, int harga)
         {
             var result = await PostAsync("api/obat", new { namaObat, stok, harga });
@@ -24,18 +26,21 @@ namespace PROJECTKPL.CONSOLE.Services
             return result;
         }
 
+        // request edit stok obat 
         public async Task EditStokAsync(int id, int stokBaru)
         {
             var result = await PutAsync($"api/obat/{id}/stok", new { stokBaru });
             System.Console.WriteLine(result.Success ? "Stok berhasil diperbarui." : $"[ERROR] {result.Message}");
         }
 
+        // request hapus data obat by id 
         public async Task HapusAsync(int id)
         {
             var result = await DeleteAsync($"api/obat/{id}");
             System.Console.WriteLine(result.Success ? result.Data : $"[ERROR] {result.Message}");
         }
 
+        // request Menampilkan daftar obat ke layar console
         public void PrintList(List<JsonElement> list)
         {
             if (list.Count == 0) { System.Console.WriteLine("Tidak ada obat."); return; }

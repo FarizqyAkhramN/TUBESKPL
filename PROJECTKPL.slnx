@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="PROJECTKPL.API/PROJECTKPL.API.csproj" />
   <Project Path="PROJECTKPL.CONSOLE/PROJECTKPL.CONSOLE.csproj" />
+  <Project Path="PROJECTKPL.GUI/PROJECTKPL.GUI.csproj" Id="2e0907bb-e102-4f31-8584-45b1db512083" />
   <Project Path="PROJECTKPL.Tests/PROJECTKPL.Tests.csproj" Id="44acb046-2266-4c05-b4cf-a55d55f606b9" />
 </Solution>
