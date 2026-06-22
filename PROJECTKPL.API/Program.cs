@@ -1,5 +1,7 @@
-using PROJECTKPL.API.Data;
 using Microsoft.EntityFrameworkCore;
+using PROJECTKPL.API.Data;
+using PROJECTKPL.API.Models;
+using PROJECTKPL.API.Repositories;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +9,13 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+builder.Services.AddScoped<IRepository<Obat>, ObatRepository>();
+builder.Services.AddScoped<IRepository<Pelanggan>, PelangganRepository>();
+builder.Services.AddScoped<IRepository<Pesanan>, PesananRepository>();
+builder.Services.AddScoped<ObatRepository>();
+builder.Services.AddScoped<PelangganRepository>();
+builder.Services.AddScoped<PesananRepository>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
