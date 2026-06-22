@@ -35,7 +35,11 @@ namespace PROJECTKPL.API.Repositories
             var existing = await _db.Obat.FindAsync(obat.Id);
             if (existing == null) return null;
 
+            // Update semua field
+            existing.NamaObat = obat.NamaObat;
+            existing.Harga = obat.Harga;
             existing.SetStok(obat.Stok);
+
             await _db.SaveChangesAsync();
             return existing;
         }
