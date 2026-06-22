@@ -71,7 +71,7 @@ namespace PROJECTKPL.GUI
 
             cmbGender = new ComboBox
             {
-                Location = new Point(left, top + 20),
+                Location = new Point(20, top + 20),
                 Size = new Size(width, 27),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
@@ -180,62 +180,159 @@ namespace PROJECTKPL.GUI
 
         private async void BtnDaftar_Click(object? sender, EventArgs e)
         {
-            // Validasi input
-            if (string.IsNullOrWhiteSpace(txtUsername.Text) ||
-                string.IsNullOrWhiteSpace(txtNoTelp.Text) ||
-                string.IsNullOrWhiteSpace(txtPassword.Text))
+            lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+
+            // ── Validasi Username ─────────────────────────────────────────────
+            if (string.IsNullOrWhiteSpace(txtUsername.Text))
             {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Semua field harus diisi.";
+                lblStatus.Text = "Username harus diisi.";
+                txtUsername.Focus();
+                return;
+            }
+            if (txtUsername.Text.Trim().Length < 3)
+            {
+                lblStatus.Text = "Username minimal 3 karakter.";
+                txtUsername.Focus();
+                return;
+            }
+            if (txtUsername.Text.Trim().Length > 50)
+            {
+                lblStatus.Text = "Username maksimal 50 karakter.";
+                txtUsername.Focus();
                 return;
             }
 
-            if (txtPassword.Text != txtKonfirmPassword.Text)
+            // ── Validasi No. Telepon ──────────────────────────────────────────
+            string noTelp = txtNoTelp.Text.Trim();
+            if (string.IsNullOrWhiteSpace(noTelp))
             {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Password tidak cocok.";
+                lblStatus.Text = "No. telepon harus diisi.";
+                txtNoTelp.Focus();
+                return;
+            }
+            if (!noTelp.StartsWith("08"))
+            {
+                lblStatus.Text = "No. telepon harus diawali dengan 08.";
+                txtNoTelp.Focus();
+                return;
+            }
+            if (noTelp.Length < 10 || noTelp.Length > 13)
+            {
+                lblStatus.Text = "No. telepon harus terdiri dari 10 sampai 13 digit.";
+                txtNoTelp.Focus();
+                return;
+            }
+            if (!noTelp.All(char.IsDigit))
+            {
+                lblStatus.Text = "No. telepon hanya boleh berisi angka.";
+                txtNoTelp.Focus();
                 return;
             }
 
-            if (!int.TryParse(txtUmur.Text, out int umur) || umur < 1 || umur > 120)
+            // ── Validasi Umur ─────────────────────────────────────────────────
+            if (!int.TryParse(txtUmur.Text, out int umur))
             {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Umur tidak valid.";
+                lblStatus.Text = "Umur harus berupa angka.";
+                txtUmur.Focus();
+                return;
+            }
+            if (umur < 1 || umur > 120)
+            {
+                lblStatus.Text = "Umur harus antara 1 sampai 120 tahun.";
+                txtUmur.Focus();
                 return;
             }
 
+            // ── Validasi Password ─────────────────────────────────────────────
+            string password = txtPassword.Text;
+            if (string.IsNullOrEmpty(password))
+            {
+                lblStatus.Text = "Password harus diisi.";
+                txtPassword.Focus();
+                return;
+            }
+            if (password.Length < 6)
+            {
+                lblStatus.Text = "Password minimal 6 karakter.";
+                txtPassword.Focus();
+                return;
+            }
+            if (!password.Any(char.IsUpper))
+            {
+                lblStatus.Text = "Password harus mengandung 1 huruf kapital.";
+                txtPassword.Focus();
+                return;
+            }
+            if (!password.Any(char.IsDigit))
+            {
+                lblStatus.Text = "Password harus mengandung minimal 1 angka.";
+                txtPassword.Focus();
+                return;
+            }
+
+            // ── Validasi Konfirmasi Password ──────────────────────────────────
+            if (password != txtKonfirmPassword.Text)
+            {
+                lblStatus.Text = "Konfirmasi password tidak cocok.";
+                txtKonfirmPassword.Focus();
+                return;
+            }
+
+            // ── Semua valid — kirim ke API ────────────────────────────────────
             btnDaftar.Enabled = false;
+            btnDaftar.Text = "Mendaftarkan...";
+
             try
             {
                 var res = await _http.PostAsJsonAsync("api/pelanggan", new
                 {
                     username = txtUsername.Text.Trim(),
                     gender = cmbGender.SelectedItem?.ToString() ?? "",
-                    noTelp = txtNoTelp.Text.Trim(),
+                    noTelp,
                     umur,
-                    password = txtPassword.Text
+                    password
                 });
 
                 if (res.IsSuccessStatusCode)
                 {
-                    MessageBox.Show("Akun berhasil dibuat! Silakan login.",
-                        "Berhasil", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        "Akun berhasil dibuat!\nSilakan login dengan akun baru Anda.",
+                        "Registrasi Berhasil",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
                     Close();
                 }
                 else
                 {
-                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                    lblStatus.Text = "Pendaftaran gagal. Cek kembali data.";
+                    string msg = await res.Content.ReadAsStringAsync();
+                    try
+                    {
+                        // Parse error dari FluentValidation (array JSON)
+                        var errors = System.Text.Json.JsonSerializer.Deserialize<
+                            List<System.Text.Json.JsonElement>>(msg);
+                        if (errors != null && errors.Count > 0)
+                            lblStatus.Text = errors[0].GetProperty("errorMessage").GetString()
+                                ?? "Pendaftaran gagal.";
+                        else
+                            lblStatus.Text = "Pendaftaran gagal.";
+                    }
+                    catch
+                    {
+                        // Jika bukan JSON (misal conflict no telp)
+                        lblStatus.Text = msg.Length > 100
+                            ? "Pendaftaran gagal. Cek kembali data Anda."
+                            : msg.Trim('"');
+                    }
                 }
             }
             catch
             {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
                 lblStatus.Text = "Tidak dapat terhubung ke server.";
             }
             finally
             {
                 btnDaftar.Enabled = true;
+                btnDaftar.Text = "Daftar";
             }
         }
     }

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PROJECTKPL.API.Data;
 using PROJECTKPL.API.Models;
+using PROJECTKPL.API.Repositories;
 using PROJECTKPL.API.Validators;
 
 namespace PROJECTKPL.API.Controllers
@@ -10,38 +11,38 @@ namespace PROJECTKPL.API.Controllers
     [Route("api/[controller]")]
     public class ObatController : ControllerBase
     {
-        private readonly AppDbContext _db;
+        private readonly ObatRepository _repo;
         private readonly ObatValidator _validator = new();
 
-        public ObatController(AppDbContext db)
+        public ObatController(ObatRepository repo)
         {
-            _db = db;
+            _repo = repo;
         }
 
-        // manggil seluruh data obat dari database
+        // GET api/obat
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var obat = await _db.Obat.ToListAsync();
+            var obat = await _repo.GetAllAsync();
             return Ok(obat);
         }
 
-        // ambil satu data obat berdasarkan id
+        // GET api/obat/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var obat = await _db.Obat.FindAsync(id);
-            if (obat == null) return NotFound($"Obat id {id} tidak ditemukan.");
+            var obat = await _repo.GetByIdAsync(id);
+            if (obat == null) return NotFound("Data tidak ditemukan.");
             return Ok(obat);
         }
 
-        // add data obat baru ke database
+        // POST api/obat
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ObatRequest req)
         {
             var obat = new Obat(req.NamaObat, req.Stok, req.Harga);
 
-            // Validasi semua ruleset sekaligus
+            // Validasi semua ruleset
             var hasil = _validator.ValidateAll(obat);
             if (!hasil.IsValid)
             {
@@ -49,46 +50,39 @@ namespace PROJECTKPL.API.Controllers
                 return BadRequest(errors);
             }
 
-            _db.Obat.Add(obat);
-            await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = obat.Id }, obat);
+            var created = await _repo.AddAsync(obat);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
-        // mengubah stok obat
+        // PUT api/obat/{id}/stok
         [HttpPut("{id}/stok")]
         public async Task<IActionResult> EditStok(int id, [FromBody] EditStokRequest req)
         {
-            var obat = await _db.Obat.FindAsync(id);
-            if (obat == null) return NotFound($"Obat id {id} tidak ditemukan.");
+            var obat = await _repo.GetByIdAsync(id);
+            if (obat == null) return NotFound("Data tidak ditemukan.");
 
             // Validasi ruleset Stok saja
-            obat.SetStok(req.StokBaru);
-            var hasil = _validator.Validate(obat, "Stok");
-            if (!hasil.IsValid)
-            {
-                var errors = hasil.Errors.Select(e => e.ErrorMessage);
-                return BadRequest(errors);
-            }
+            if (req.StokBaru < 0)
+                return BadRequest("Stok tidak boleh negatif.");
 
-            await _db.SaveChangesAsync();
-            return Ok(obat);
+            obat.SetStok(req.StokBaru);
+            var updated = await _repo.UpdateAsync(obat);
+            return Ok(updated);
         }
 
-        // hapus data obat berdasarkan id
+        // DELETE api/obat/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var obat = await _db.Obat.FindAsync(id);
-            if (obat == null) return NotFound($"Obat id {id} tidak ditemukan.");
+            var obat = await _repo.GetByIdAsync(id);
+            if (obat == null) return NotFound("Data tidak ditemukan.");
 
-            _db.Obat.Remove(obat);
-            await _db.SaveChangesAsync();
-            return Ok($"Obat '{obat.NamaObat}' berhasil dihapus.");
+            string nama = obat.NamaObat;
+            await _repo.DeleteAsync(id);
+            return Ok($"Obat '{nama}' berhasil dihapus.");
         }
     }
 
-    // menerima request service
     public record ObatRequest(string NamaObat, int Stok, int Harga);
     public record EditStokRequest(int StokBaru);
-
 }

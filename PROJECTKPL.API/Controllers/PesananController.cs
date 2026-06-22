@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PROJECTKPL.API.Models;
-using PROJECTKPL.API.Data;
 using Microsoft.EntityFrameworkCore;
+using PROJECTKPL.API.Data;
+using PROJECTKPL.API.Models;
+using PROJECTKPL.API.Repositories;
 
 namespace PROJECTKPL.API.Controllers
 {
@@ -9,22 +10,21 @@ namespace PROJECTKPL.API.Controllers
     [Route("api/[controller]")]
     public class PesananController : ControllerBase
     {
-        private readonly AppDbContext _db;
+        private readonly PesananRepository _repo;
+        private readonly ObatRepository _repoObat;
         private static int _counter = 1;
 
-        public PesananController(AppDbContext db)
+        public PesananController(PesananRepository repo, ObatRepository repoObat)
         {
-            _db = db;
-        }   
+            _repo = repo;
+            _repoObat = repoObat;
+        }
 
         // GET api/pesanan
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var list = await _db.Pesanan
-                .Include(p => p.Pelanggan)
-                .Include(p => p.Obat)
-                .ToListAsync();
+            var list = await _repo.GetAllAsync();
             return Ok(list);
         }
 
@@ -32,11 +32,8 @@ namespace PROJECTKPL.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var pesanan = await _db.Pesanan
-                .Include(p => p.Pelanggan)
-                .Include(p => p.Obat)
-                .FirstOrDefaultAsync(p => p.Id == id);
-            if (pesanan == null) return NotFound($"Pesanan id {id} tidak ditemukan.");
+            var pesanan = await _repo.GetByIdAsync(id);
+            if (pesanan == null) return NotFound("Data tidak ditemukan.");
             return Ok(pesanan);
         }
 
@@ -44,10 +41,7 @@ namespace PROJECTKPL.API.Controllers
         [HttpGet("pelanggan/{pelangganId}")]
         public async Task<IActionResult> GetByPelanggan(int pelangganId)
         {
-            var list = await _db.Pesanan
-                .Include(p => p.Obat)
-                .Where(p => p.PelangganId == pelangganId)
-                .ToListAsync();
+            var list = await _repo.GetByPelangganAsync(pelangganId);
             return Ok(list);
         }
 
@@ -55,17 +49,17 @@ namespace PROJECTKPL.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] PesananRequest req)
         {
-            var obat = await _db.Obat.FindAsync(req.ObatId);
-            if (obat == null) return NotFound($"Obat id {req.ObatId} tidak ditemukan.");
-            if (obat.StatusObat == StatusObat.Habis) return BadRequest($"Obat '{obat.NamaObat}' sedang habis.");
-            if (obat.Stok < req.Jumlah) return BadRequest($"Stok tidak cukup. Tersedia: {obat.Stok}.");
+            var obat = await _repoObat.GetByIdAsync(req.ObatId);
+            if (obat == null) return NotFound("Obat tidak ditemukan.");
+            if (obat.StatusObat == StatusObat.Habis)
+                return BadRequest($"Obat '{obat.NamaObat}' sedang habis.");
+            if (obat.Stok < req.Jumlah)
+                return BadRequest($"Stok tidak cukup. Tersedia: {obat.Stok}.");
 
-            var pelanggan = await _db.Pelanggan.FindAsync(req.PelangganId);
-            if (pelanggan == null) return NotFound($"Pelanggan id {req.PelangganId} tidak ditemukan.");
-
+            // Validasi pembayaran mencukupi total harga
             int totalHarga = obat.Harga * req.Jumlah;
             if (req.Pembayaran < totalHarga)
-                return BadRequest($"Pembayaran kurang. Total harga: Rp{totalHarga}, pembayaran: Rp{req.Pembayaran}.");
+                return BadRequest($"Pembayaran kurang. Total: Rp{totalHarga}, dibayar: Rp{req.Pembayaran}.");
 
             var pesanan = new Pesanan
             {
@@ -78,27 +72,26 @@ namespace PROJECTKPL.API.Controllers
                 Status = StatusPesanan.Keranjang
             };
 
+            // Kurangi stok obat
             obat.SetStok(obat.Stok - req.Jumlah);
+            await _repoObat.UpdateAsync(obat);
 
-            _db.Pesanan.Add(pesanan);
-            await _db.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetById), new { id = pesanan.Id }, pesanan);
+            var created = await _repo.AddAsync(pesanan);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         // PUT api/pesanan/{id}/trigger
-        // Body: { "trigger": "Konfirmasi" }  (atau Siapkan, AmbilDanBayar, Batalkan)
         [HttpPut("{id}/trigger")]
         public async Task<IActionResult> AktifkanTrigger(int id, [FromBody] TriggerRequest req)
         {
-            var pesanan = await _db.Pesanan.FindAsync(id);
-            if (pesanan == null) return NotFound($"Pesanan id {id} tidak ditemukan.");
+            var pesanan = await _repo.GetByIdAsync(id);
+            if (pesanan == null) return NotFound("Data tidak ditemukan.");
 
             var statusBaru = pesanan.AktifkanTrigger(req.Trigger);
             if (statusBaru == null)
                 return BadRequest($"Transisi tidak valid: {pesanan.Status} + {req.Trigger}");
 
-            await _db.SaveChangesAsync();
+            await _repo.UpdateAsync(pesanan);
             return Ok(new { pesanan.Id, pesanan.IdPesanan, StatusBaru = statusBaru });
         }
 
@@ -106,16 +99,15 @@ namespace PROJECTKPL.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var pesanan = await _db.Pesanan.FindAsync(id);
-            if (pesanan == null) return NotFound($"Pesanan id {id} tidak ditemukan.");
+            var pesanan = await _repo.GetByIdAsync(id);
+            if (pesanan == null) return NotFound("Data tidak ditemukan.");
 
-            _db.Pesanan.Remove(pesanan);
-            await _db.SaveChangesAsync();
-            return Ok($"Pesanan '{pesanan.IdPesanan}' berhasil dihapus.");
+            string idPesanan = pesanan.IdPesanan;
+            await _repo.DeleteAsync(id);
+            return Ok($"Pesanan '{idPesanan}' berhasil dihapus.");
         }
     }
 
-    // Request DTOs
     public record PesananRequest(
         int PelangganId,
         int ObatId,

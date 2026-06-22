@@ -22,7 +22,7 @@ namespace PROJECTKPL.API.Repositories
                     Username = p.Username,
                     Gender = p.Gender,
                     NoTelp = p.NoTelp,
-                    Umur = p.Umur,
+                    Umur = p.Umur
                     // Password sengaja tidak dikembalikan
                 })
                 .ToListAsync();
@@ -60,13 +60,15 @@ namespace PROJECTKPL.API.Repositories
             return true;
         }
 
-        // Method tambahan khusus Pelanggan
-        public async Task<Pelanggan?> LoginAsync(string noTelp, string password)
+        // Cari by NoTelp — dipakai saat login
+        // Mengembalikan data lengkap termasuk Password untuk keperluan verifikasi hash
+        public async Task<Pelanggan?> CariByNoTelpAsync(string noTelp)
         {
             return await _db.Pelanggan
-                .FirstOrDefaultAsync(p => p.NoTelp == noTelp && p.Password == password);
+                .FirstOrDefaultAsync(p => p.NoTelp == noTelp);
         }
 
+        // Cek apakah NoTelp sudah terdaftar — dipakai saat registrasi
         public async Task<bool> NoTelpSudahAdaAsync(string noTelp)
         {
             return await _db.Pelanggan.AnyAsync(p => p.NoTelp == noTelp);
