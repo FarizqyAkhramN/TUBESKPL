@@ -1,20 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Drawing;
+using System.Net.Http;
+using System.Windows.Forms;
 
 namespace PROJECTKPL.GUI
 {
     public class FormDashboard : Form
     {
-        private Panel pnlSidebar;
+        private FlowLayoutPanel pnlSidebar;
         private Panel pnlContent;
+
         private Label lblJudul;
         private Label lblWelcome;
+
         private Button btnObat;
         private Button btnPelanggan;
         private Button btnPesanan;
         private Button btnLogout;
-        private Panel pnlContentArea;
+
+        private Button activeButton;
 
         private readonly HttpClient _http;
 
@@ -34,12 +38,15 @@ namespace PROJECTKPL.GUI
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 9f);
 
-            // ── Sidebar ───────────────────────────────────────────────────
-            pnlSidebar = new Panel
+            // ================= SIDEBAR =================
+            pnlSidebar = new FlowLayoutPanel
             {
                 Size = new Size(200, 600),
                 Location = new Point(0, 0),
-                BackColor = Color.FromArgb(30, 41, 59)
+                BackColor = Color.FromArgb(30, 41, 59),
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true
             };
 
             lblJudul = new Label
@@ -47,8 +54,8 @@ namespace PROJECTKPL.GUI
                 Text = "ApoTek",
                 Font = new Font("Segoe UI", 16f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(20, 24),
-                AutoSize = true
+                AutoSize = true,
+                Margin = new Padding(20, 20, 0, 5)
             };
 
             lblWelcome = new Label
@@ -56,42 +63,67 @@ namespace PROJECTKPL.GUI
                 Text = "Selamat datang,\nAdmin",
                 Font = new Font("Segoe UI", 8.5f),
                 ForeColor = Color.FromArgb(148, 163, 184),
-                Location = new Point(20, 60),
-                AutoSize = true
+                AutoSize = true,
+                Margin = new Padding(20, 0, 0, 10)
             };
 
-            // Separator
-            var sep = new Panel
+            btnObat = CreateButton("Kelola Obat");
+            btnPelanggan = CreateButton("Kelola Pelanggan");
+            btnPesanan = CreateButton("Kelola Pesanan");
+            btnLogout = CreateButton("Logout");
+
+            pnlSidebar.Controls.Add(lblJudul);
+            pnlSidebar.Controls.Add(lblWelcome);
+            pnlSidebar.Controls.Add(new Panel { Height = 10, Width = 200 });
+
+            pnlSidebar.Controls.Add(btnObat);
+            pnlSidebar.Controls.Add(btnPelanggan);
+            pnlSidebar.Controls.Add(btnPesanan);
+
+            pnlSidebar.Controls.Add(new Panel { Height = 200, Width = 200 }); // dorong logout ke bawah
+            pnlSidebar.Controls.Add(btnLogout);
+
+            // ================= CONTENT =================
+            pnlContent = new Panel
             {
-                Size = new Size(160, 1),
-                Location = new Point(20, 100),
-                BackColor = Color.FromArgb(51, 65, 85)
+                Size = new Size(700, 600),
+                Location = new Point(200, 0),
+                BackColor = Color.FromArgb(245, 247, 250)
             };
 
-            btnObat = BuatTombolSidebar("🧴  Kelola Obat", 120);
-            btnObat.Click += (s, e) => TampilForm(new FormKelolaObat(_http));
-
-            btnPelanggan = BuatTombolSidebar("👤  Kelola Pelanggan", 165);
-            btnPelanggan.Click += (s, e) => TampilForm(new FormKelolaPelanggan(_http));
-
-            btnPesanan = BuatTombolSidebar("📋  Kelola Pesanan", 210);
-            btnPesanan.Click += (s, e) => TampilForm(new FormKelolaPesanan(_http));
-
-            btnLogout = new Button
+            Label lblDefault = new Label
             {
-                Text = "🚪  Logout",
-                Location = new Point(0, 540),
-                Size = new Size(200, 40),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.Transparent,
-                ForeColor = Color.FromArgb(248, 113, 113),
-                Font = new Font("Segoe UI", 9f),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(20, 0, 0, 0),
-                Cursor = Cursors.Hand
+                Text = "Pilih menu di sebelah kiri",
+                Font = new Font("Segoe UI", 14f),
+                ForeColor = Color.FromArgb(148, 163, 184),
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter
             };
-            btnLogout.FlatAppearance.BorderSize = 0;
-            btnLogout.FlatAppearance.MouseOverBackColor = Color.FromArgb(51, 65, 85);
+
+            pnlContent.Controls.Add(lblDefault);
+
+            Controls.Add(pnlSidebar);
+            Controls.Add(pnlContent);
+
+            // ================= EVENTS =================
+            btnObat.Click += (s, e) =>
+            {
+                SetActive(btnObat);
+                LoadForm(new FormKelolaObat(_http));
+            };
+
+            btnPelanggan.Click += (s, e) =>
+            {
+                SetActive(btnPelanggan);
+                LoadForm(new FormKelolaPelanggan(_http));
+            };
+
+            btnPesanan.Click += (s, e) =>
+            {
+                SetActive(btnPesanan);
+                LoadForm(new FormKelolaPesanan(_http));
+            };
+
             btnLogout.Click += (s, e) =>
             {
                 if (MessageBox.Show("Yakin ingin logout?", "Konfirmasi",
@@ -100,64 +132,57 @@ namespace PROJECTKPL.GUI
                     Close();
                 }
             };
-
-            pnlSidebar.Controls.AddRange(new Control[]
-            {
-                lblJudul, lblWelcome, sep,
-                btnObat, btnPelanggan, btnPesanan, btnLogout
-            });
-
-            // ── Content area ──────────────────────────────────────────────
-            pnlContent = new Panel
-            {
-                Size = new Size(700, 600),
-                Location = new Point(200, 0),
-                BackColor = Color.FromArgb(245, 247, 250)
-            };
-
-            // Tampilan awal
-            var lblSelamat = new Label
-            {
-                Text = "Pilih menu di sebelah kiri",
-                Font = new Font("Segoe UI", 14f),
-                ForeColor = Color.FromArgb(148, 163, 184),
-                AutoSize = false,
-                Size = new Size(700, 600),
-                TextAlign = ContentAlignment.MiddleCenter
-            };
-            pnlContent.Controls.Add(lblSelamat);
-
-            Controls.AddRange(new Control[] { pnlSidebar, pnlContent });
         }
 
-        private Button BuatTombolSidebar(string text, int top)
+        // ================= BUTTON FACTORY =================
+        private Button CreateButton(string text)
         {
             var btn = new Button
             {
                 Text = text,
-                Location = new Point(0, top),
-                Size = new Size(200, 40),
+                Size = new Size(200, 45),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.Transparent,
                 ForeColor = Color.FromArgb(203, 213, 225),
                 Font = new Font("Segoe UI", 9f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(20, 0, 0, 0),
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 5, 0, 0)
             };
+
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(51, 65, 85);
+
             return btn;
         }
 
-        private void TampilForm(Form form)
+        // ================= NAVIGATION =================
+        private void LoadForm(Form form)
         {
+            foreach (Control c in pnlContent.Controls)
+            {
+                c.Dispose();
+            }
+
             pnlContent.Controls.Clear();
+
             form.TopLevel = false;
             form.FormBorderStyle = FormBorderStyle.None;
             form.Dock = DockStyle.Fill;
+
             pnlContent.Controls.Add(form);
             form.Show();
+        }
+
+        // ================= ACTIVE STATE =================
+        private void SetActive(Button btn)
+        {
+            if (activeButton != null)
+                activeButton.BackColor = Color.Transparent;
+
+            activeButton = btn;
+            activeButton.BackColor = Color.FromArgb(51, 65, 85);
         }
     }
 }

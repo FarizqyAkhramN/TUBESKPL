@@ -1,28 +1,46 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace PROJECTKPL.GUI
 {
     public class FormKelolaPelanggan : Form
     {
+        private enum Mode
+        {
+            Add,
+            View
+        }
+
+        private Mode currentMode = Mode.Add;
+
         private Label lblJudul;
+
         private DataGridView dgvPelanggan;
         private Panel pnlAksi;
+        private Panel pnlStatus;
+
         private TextBox txtUsername;
-        private TextBox txtGender;
+        private ComboBox cmbGender;
         private TextBox txtNoTelp;
         private TextBox txtUmur;
         private TextBox txtPassword;
+
         private Button btnTambah;
         private Button btnHapus;
         private Button btnRefresh;
+
         private Label lblStatus;
 
         private readonly HttpClient _http;
         private List<JsonElement> _daftarPelanggan = new();
+
+        private int? selectedPelangganId = null;
 
         public FormKelolaPelanggan(HttpClient http)
         {
@@ -34,21 +52,24 @@ namespace PROJECTKPL.GUI
         private void InitializeComponent()
         {
             Text = "Kelola Pelanggan";
+            Size = new Size(720, 600);
             BackColor = Color.FromArgb(245, 247, 250);
             Font = new Font("Segoe UI", 9f);
 
+            // ================= TITLE =================
             lblJudul = new Label
             {
                 Text = "Kelola Pelanggan",
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59),
-                Location = new Point(20, 20),
+                Location = new Point(20, 15),
                 AutoSize = true
             };
 
+            // ================= GRID =================
             dgvPelanggan = new DataGridView
             {
-                Location = new Point(20, 60),
+                Location = new Point(20, 55),
                 Size = new Size(660, 240),
                 ReadOnly = true,
                 AllowUserToAddRows = false,
@@ -56,112 +77,148 @@ namespace PROJECTKPL.GUI
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 RowHeadersVisible = false,
-                Font = new Font("Segoe UI", 9f),
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
-            dgvPelanggan.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 252);
-            dgvPelanggan.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(71, 85, 105);
-            dgvPelanggan.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
-            dgvPelanggan.EnableHeadersVisualStyles = false;
+
             dgvPelanggan.Columns.Add("Id", "ID");
             dgvPelanggan.Columns.Add("Username", "Username");
             dgvPelanggan.Columns.Add("Gender", "Gender");
             dgvPelanggan.Columns.Add("NoTelp", "No. Telepon");
             dgvPelanggan.Columns.Add("Umur", "Umur");
-            dgvPelanggan.Columns["Id"].FillWeight = 30;
 
+            dgvPelanggan.CellClick += DgvPelanggan_CellClick;
+
+            // ================= FORM PANEL =================
             pnlAksi = new Panel
             {
-                Location = new Point(20, 315),
-                Size = new Size(660, 210),
+                Location = new Point(20, 320),
+                Size = new Size(660, 200),
                 BackColor = Color.White
             };
+
             pnlAksi.Paint += (s, e) =>
-                e.Graphics.DrawRectangle(new Pen(Color.FromArgb(226, 232, 240)), 0, 0, pnlAksi.Width - 1, pnlAksi.Height - 1);
+            {
+                e.Graphics.DrawRectangle(
+                    new Pen(Color.FromArgb(226, 232, 240)),
+                    0, 0, pnlAksi.Width - 1, pnlAksi.Height - 1
+                );
+            };
 
             var lblForm = new Label
             {
                 Text = "Tambah Pelanggan",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Location = new Point(15, 12),
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                Location = new Point(15, 10),
                 AutoSize = true
             };
 
-            // Row 1
-            var lblUsr = BuatLabel("Username", new Point(15, 38));
-            var lblGen = BuatLabel("Gender", new Point(175, 38));
-            var lblTlp = BuatLabel("No. Telepon", new Point(335, 38));
-            txtUsername = BuatTextBox(new Point(15, 55), 150);
-            txtGender = BuatTextBox(new Point(175, 55), 150);
-            txtNoTelp = BuatTextBox(new Point(335, 55), 150);
+            // ================= INPUT =================
+            txtUsername = new TextBox { Location = new Point(15, 55), Size = new Size(150, 26) };
 
-            // Row 2
-            var lblUmr = BuatLabel("Umur", new Point(15, 90));
-            var lblPass = BuatLabel("Password", new Point(175, 90));
-            txtUmur = BuatTextBox(new Point(15, 107), 150);
-            txtPassword = BuatTextBox(new Point(175, 107), 150);
-            txtPassword.PasswordChar = '●';
+            cmbGender = new ComboBox
+            {
+                Location = new Point(175, 55),
+                Size = new Size(150, 26),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbGender.Items.AddRange(new object[]
+            {
+                "Laki-laki",
+                "Perempuan"
+            });
 
-            btnTambah = BuatTombol("Tambah", new Point(15, 150), Color.FromArgb(37, 99, 235));
+            txtNoTelp = new TextBox { Location = new Point(335, 55), Size = new Size(150, 26) };
+
+            txtUmur = new TextBox { Location = new Point(15, 110), Size = new Size(150, 26) };
+
+            txtPassword = new TextBox
+            {
+                Location = new Point(175, 110),
+                Size = new Size(150, 26),
+                PasswordChar = '●'
+            };
+
+            // ================= LABELS =================
+            var lbl1 = CreateLabel("Username", new Point(15, 35));
+            var lbl2 = CreateLabel("Gender", new Point(175, 35));
+            var lbl3 = CreateLabel("No Telp", new Point(335, 35));
+            var lbl4 = CreateLabel("Umur", new Point(15, 90));
+            var lbl5 = CreateLabel("Password", new Point(175, 90));
+
+            // ================= BUTTON =================
+            btnTambah = CreateButton("Tambah", new Point(15, 150), Color.FromArgb(37, 99, 235));
+            btnHapus = CreateButton("Hapus", new Point(115, 150), Color.FromArgb(220, 38, 38));
+            btnRefresh = CreateButton("Refresh", new Point(215, 150), Color.FromArgb(100, 116, 139));
+
             btnTambah.Click += BtnTambah_Click;
-
-            btnHapus = BuatTombol("Hapus", new Point(115, 150), Color.FromArgb(220, 38, 38));
             btnHapus.Click += BtnHapus_Click;
-
-            btnRefresh = BuatTombol("Refresh", new Point(215, 150), Color.FromArgb(100, 116, 139));
-            btnRefresh.Click += async (s, e) => await LoadPelangganAsync();
+            btnRefresh.Click += async (s, e) => await RefreshAll();
 
             pnlAksi.Controls.AddRange(new Control[]
             {
                 lblForm,
-                lblUsr, lblGen, lblTlp,
-                txtUsername, txtGender, txtNoTelp,
-                lblUmr, lblPass,
-                txtUmur, txtPassword,
-                btnTambah, btnHapus, btnRefresh
+                lbl1, lbl2, lbl3, lbl4, lbl5,
+                txtUsername,
+                cmbGender,
+                txtNoTelp,
+                txtUmur,
+                txtPassword,
+                btnTambah,
+                btnHapus,
+                btnRefresh
             });
+
+            // ================= STATUS PANEL (FIX KEPOtONG) =================
+            pnlStatus = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 30,
+                BackColor = Color.White
+            };
 
             lblStatus = new Label
             {
-                Text = "",
-                Location = new Point(20, 535),
+                Dock = DockStyle.Left,
                 AutoSize = true,
-                Font = new Font("Segoe UI", 8.5f)
+                Padding = new Padding(10, 5, 0, 0),
+                ForeColor = Color.FromArgb(100, 116, 139)
             };
 
-            Controls.AddRange(new Control[] { lblJudul, dgvPelanggan, pnlAksi, lblStatus });
+            pnlStatus.Controls.Add(lblStatus);
+
+            // ================= ADD TO FORM =================
+            Controls.AddRange(new Control[]
+            {
+                lblJudul,
+                dgvPelanggan,
+                pnlAksi,
+                pnlStatus
+            });
         }
 
-        private Label BuatLabel(string text, Point loc) => new Label
+        // ================= GRID CLICK =================
+        private void DgvPelanggan_CellClick(object sender, DataGridViewCellEventArgs e)
         {
-            Text = text,
-            Location = loc,
-            AutoSize = true,
-            ForeColor = Color.FromArgb(71, 85, 105),
-            Font = new Font("Segoe UI", 8.5f, FontStyle.Bold)
-        };
+            if (e.RowIndex < 0) return;
 
-        private TextBox BuatTextBox(Point loc, int width) => new TextBox
-        {
-            Location = loc,
-            Size = new Size(width, 26),
-            BorderStyle = BorderStyle.FixedSingle,
-            Font = new Font("Segoe UI", 9f)
-        };
+            var row = dgvPelanggan.Rows[e.RowIndex];
 
-        private Button BuatTombol(string text, Point loc, Color warna) => new Button
-        {
-            Text = text,
-            Location = loc,
-            Size = new Size(90, 32),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = warna,
-            ForeColor = Color.White,
-            Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-            Cursor = Cursors.Hand
-        };
+            selectedPelangganId = Convert.ToInt32(row.Cells["Id"].Value);
 
+            txtUsername.Text = row.Cells["Username"].Value?.ToString();
+            txtNoTelp.Text = row.Cells["NoTelp"].Value?.ToString();
+            txtUmur.Text = row.Cells["Umur"].Value?.ToString();
+
+            string gender = row.Cells["Gender"].Value?.ToString();
+            cmbGender.SelectedItem = gender;
+
+            txtPassword.Clear();
+
+            currentMode = Mode.View;
+            lblStatus.Text = "MODE: VIEW";
+        }
+
+        // ================= LOAD =================
         private async Task LoadPelangganAsync()
         {
             try
@@ -170,102 +227,137 @@ namespace PROJECTKPL.GUI
                 if (!res.IsSuccessStatusCode) return;
 
                 _daftarPelanggan = await res.Content.ReadFromJsonAsync<List<JsonElement>>() ?? new();
+
                 dgvPelanggan.Rows.Clear();
 
                 foreach (var p in _daftarPelanggan)
                 {
                     dgvPelanggan.Rows.Add(
-                        p.GetProperty("id"),
+                        p.GetProperty("id").GetInt32(),
                         p.GetProperty("username").GetString(),
                         p.GetProperty("gender").GetString(),
                         p.GetProperty("noTelp").GetString(),
-                        p.GetProperty("umur")
+                        p.GetProperty("umur").GetInt32()
                     );
                 }
-                lblStatus.ForeColor = Color.FromArgb(100, 116, 139);
-                lblStatus.Text = $"Total: {_daftarPelanggan.Count} pelanggan";
+
+                lblStatus.Text = $"Total: {_daftarPelanggan.Count} pelanggan | MODE: {currentMode}";
             }
             catch
             {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Gagal memuat data.";
+                lblStatus.Text = "Gagal load data.";
             }
         }
 
-        private async void BtnTambah_Click(object? sender, EventArgs e)
+        // ================= TAMBAH =================
+        private async void BtnTambah_Click(object sender, EventArgs e)
         {
+            if (!Validate(out int umur)) return;
+
+            var res = await _http.PostAsJsonAsync("api/pelanggan", new
+            {
+                username = txtUsername.Text.Trim(),
+                gender = cmbGender.SelectedItem?.ToString(),
+                noTelp = txtNoTelp.Text.Trim(),
+                umur,
+                password = txtPassword.Text
+            });
+
+            if (res.IsSuccessStatusCode)
+            {
+                lblStatus.Text = "Pelanggan berhasil ditambahkan.";
+                await RefreshAll();
+            }
+        }
+
+        // ================= DELETE =================
+        private async void BtnHapus_Click(object sender, EventArgs e)
+        {
+            if (selectedPelangganId == null)
+            {
+                lblStatus.Text = "Pilih pelanggan dulu.";
+                return;
+            }
+
+            await _http.DeleteAsync($"api/pelanggan/{selectedPelangganId}");
+
+            lblStatus.Text = "Pelanggan dihapus.";
+
+            await RefreshAll();
+        }
+
+        // ================= RESET =================
+        private async Task RefreshAll()
+        {
+            ResetForm();
+            await LoadPelangganAsync();
+        }
+
+        private void ResetForm()
+        {
+            txtUsername.Clear();
+            txtNoTelp.Clear();
+            txtUmur.Clear();
+            txtPassword.Clear();
+
+            cmbGender.SelectedIndex = -1;
+
+            selectedPelangganId = null;
+            currentMode = Mode.Add;
+
+            dgvPelanggan.ClearSelection();
+
+            lblStatus.Text = "MODE: ADD";
+        }
+
+        // ================= VALIDATION =================
+        private bool Validate(out int umur)
+        {
+            umur = 0;
+
             if (string.IsNullOrWhiteSpace(txtUsername.Text) ||
-                string.IsNullOrWhiteSpace(txtGender.Text) ||
+                cmbGender.SelectedIndex == -1 ||
                 string.IsNullOrWhiteSpace(txtNoTelp.Text) ||
                 string.IsNullOrWhiteSpace(txtPassword.Text))
             {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Semua field harus diisi.";
-                return;
-            }
-            if (!int.TryParse(txtUmur.Text, out int umur) || umur < 1 || umur > 120)
-            {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Umur harus antara 1-120.";
-                return;
+                lblStatus.Text = "Semua field wajib diisi.";
+                return false;
             }
 
-            try
+            if (!int.TryParse(txtUmur.Text, out umur) || umur < 1 || umur > 120)
             {
-                var res = await _http.PostAsJsonAsync("api/pelanggan", new
-                {
-                    username = txtUsername.Text.Trim(),
-                    gender = txtGender.Text.Trim(),
-                    noTelp = txtNoTelp.Text.Trim(),
-                    umur,
-                    password = txtPassword.Text
-                });
+                lblStatus.Text = "Umur tidak valid.";
+                return false;
+            }
 
-                if (res.IsSuccessStatusCode)
-                {
-                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
-                    lblStatus.Text = "Pelanggan berhasil ditambahkan.";
-                    txtUsername.Clear(); txtGender.Clear();
-                    txtNoTelp.Clear(); txtUmur.Clear(); txtPassword.Clear();
-                    await LoadPelangganAsync();
-                }
-                else
-                {
-                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                    lblStatus.Text = "Gagal menambahkan pelanggan. Cek validasi.";
-                }
-            }
-            catch
-            {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Tidak dapat terhubung ke server.";
-            }
+            return true;
         }
 
-        private async void BtnHapus_Click(object? sender, EventArgs e)
+        // ================= HELPERS =================
+        private Label CreateLabel(string text, Point loc)
         {
-            if (dgvPelanggan.CurrentRow == null) return;
-
-            string nama = dgvPelanggan.CurrentRow.Cells["Username"].Value?.ToString() ?? "";
-            if (MessageBox.Show($"Hapus pelanggan '{nama}'?", "Konfirmasi",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-
-            int id = (int)dgvPelanggan.CurrentRow.Cells["Id"].Value;
-            try
+            return new Label
             {
-                var res = await _http.DeleteAsync($"api/pelanggan/{id}");
-                if (res.IsSuccessStatusCode)
-                {
-                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
-                    lblStatus.Text = $"Pelanggan '{nama}' berhasil dihapus.";
-                    await LoadPelangganAsync();
-                }
-            }
-            catch
+                Text = text,
+                Location = loc,
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                ForeColor = Color.FromArgb(71, 85, 105)
+            };
+        }
+
+        private Button CreateButton(string text, Point loc, Color color)
+        {
+            return new Button
             {
-                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Tidak dapat terhubung ke server.";
-            }
+                Text = text,
+                Location = loc,
+                Size = new Size(90, 32),
+                BackColor = color,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+            };
         }
     }
 }

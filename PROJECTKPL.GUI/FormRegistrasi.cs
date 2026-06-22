@@ -28,117 +28,137 @@ namespace PROJECTKPL.GUI
 
         private void InitializeComponent()
         {
-            Text = "Daftar Akun Baru — ApoTek";
-            Size = new Size(400, 500);
-            StartPosition = FormStartPosition.CenterParent;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            BackColor = Color.FromArgb(245, 247, 250);
-            Font = new Font("Segoe UI", 9f);
+            Text = "Registrasi Akun";
+            Size = new Size(500, 620);
 
-            var pnlCard = new Panel
-            {
-                Size = new Size(340, 420),
-                Location = new Point(30, 20),
-                BackColor = Color.White
-            };
+            StartPosition = FormStartPosition.CenterParent;
+
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+
+            MaximizeBox = false;
+            MinimizeBox = false;
+
+            BackColor = Color.FromArgb(240, 240, 240);
+
+            Font = new Font("Segoe UI", 9F);
 
             lblJudul = new Label
             {
-                Text = "Daftar Akun Baru",
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(30, 41, 59),
-                Location = new Point(20, 20),
-                AutoSize = true
+                Text = "REGISTRASI AKUN",
+                Font = new Font(
+                    "Segoe UI",
+                    14,
+                    FontStyle.Bold
+                ),
+                AutoSize = true,
+                Location = new Point(150, 20)
             };
 
-            int top = 60;
+            int left = 40;
+            int width = 390;
+            int top = 70;
 
-            var lblUsr = BuatLabel("Username", top);
+            Controls.Add(lblJudul);
+
+            Controls.Add(BuatLabel("Username", top));
             txtUsername = BuatTextBox(top + 20);
+            txtUsername.Width = width;
+            Controls.Add(txtUsername);
+
             top += 60;
 
-            var lblGen = BuatLabel("Gender", top);
+            Controls.Add(BuatLabel("Gender", top));
+
             cmbGender = new ComboBox
             {
-                Location = new Point(20, top + 20),
-                Size = new Size(300, 26),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font = new Font("Segoe UI", 9f)
+                Location = new Point(left, top + 20),
+                Size = new Size(width, 27),
+                DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbGender.Items.AddRange(new object[] { "Laki-laki", "Perempuan" });
+
+            cmbGender.Items.AddRange(new object[]
+            {
+        "Laki-laki",
+        "Perempuan"
+            });
+
             cmbGender.SelectedIndex = 0;
+
+            Controls.Add(cmbGender);
+
             top += 60;
 
-            var lblTlp = BuatLabel("No. Telepon (awali 08)", top);
+            Controls.Add(BuatLabel("No Telepon", top));
+
             txtNoTelp = BuatTextBox(top + 20);
+            txtNoTelp.Width = width;
+
+            Controls.Add(txtNoTelp);
+
             top += 60;
 
-            var lblUmr = BuatLabel("Umur", top);
+            Controls.Add(BuatLabel("Umur", top));
+
             txtUmur = BuatTextBox(top + 20);
+            txtUmur.Width = width;
+
+            Controls.Add(txtUmur);
+
             top += 60;
 
-            var lblPass = BuatLabel("Password", top);
+            Controls.Add(BuatLabel("Password", top));
+
             txtPassword = BuatTextBox(top + 20);
-            txtPassword.PasswordChar = '●';
+            txtPassword.Width = width;
+            txtPassword.PasswordChar = '*';
+
+            Controls.Add(txtPassword);
+
             top += 60;
 
-            var lblKonfirm = BuatLabel("Konfirmasi Password", top);
+            Controls.Add(BuatLabel("Konfirmasi Password", top));
+
             txtKonfirmPassword = BuatTextBox(top + 20);
-            txtKonfirmPassword.PasswordChar = '●';
-            top += 60;
+            txtKonfirmPassword.Width = width;
+            txtKonfirmPassword.PasswordChar = '*';
+
+            Controls.Add(txtKonfirmPassword);
+
+            top += 70;
 
             lblStatus = new Label
             {
-                Text = "",
-                Location = new Point(20, top),
-                Size = new Size(300, 20),
-                Font = new Font("Segoe UI", 8.5f),
-                AutoSize = false
+                Location = new Point(left, top),
+                Size = new Size(width, 25),
+                ForeColor = Color.DarkRed
             };
-            top += 25;
+
+            Controls.Add(lblStatus);
+
+            top += 40;
 
             btnDaftar = new Button
             {
                 Text = "Daftar",
-                Location = new Point(20, top),
-                Size = new Size(140, 34),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(37, 99, 235),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Size = new Size(185, 35),
+                Location = new Point(left, top),
+                BackColor = Color.Gainsboro
             };
-            btnDaftar.FlatAppearance.BorderSize = 0;
+
             btnDaftar.Click += BtnDaftar_Click;
 
             btnBatal = new Button
             {
                 Text = "Batal",
-                Location = new Point(170, top),
-                Size = new Size(140, 34),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(226, 232, 240),
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Font = new Font("Segoe UI", 9f),
-                Cursor = Cursors.Hand
+                Size = new Size(185, 35),
+                Location = new Point(left + 205, top),
+                BackColor = Color.Gainsboro
             };
-            btnBatal.FlatAppearance.BorderSize = 0;
+
             btnBatal.Click += (s, e) => Close();
 
-            pnlCard.Controls.AddRange(new Control[]
-            {
-                lblJudul,
-                lblUsr, txtUsername,
-                lblGen, cmbGender,
-                lblTlp, txtNoTelp,
-                lblUmr, txtUmur,
-                lblPass, txtPassword,
-                lblKonfirm, txtKonfirmPassword,
-                lblStatus, btnDaftar, btnBatal
-            });
-
-            Controls.Add(pnlCard);
+            Controls.Add(btnDaftar);
+            Controls.Add(btnBatal);
         }
 
         private Label BuatLabel(string text, int top) => new Label

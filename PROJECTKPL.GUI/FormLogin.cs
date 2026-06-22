@@ -26,180 +26,164 @@ namespace PROJECTKPL.GUI
 
         public FormLogin()
         {
-            _http = new HttpClient { BaseAddress = new Uri("http://localhost:5252/") };
+            _http = new HttpClient { BaseAddress = new Uri("http://localhost:5188/") };
             InitializeComponent();
         }
 
         private void InitializeComponent()
         {
-            // ── Form ──────────────────────────────────────────────────────
-            Text = "PROJECTKPL — Sistem Apotek";
-            Size = new Size(420, 560);
+            // FORM
+            Text = "Sistem Apotek";
+            Size = new Size(500, 400);
             StartPosition = FormStartPosition.CenterScreen;
-            FormBorderStyle = FormBorderStyle.FixedSingle;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
-            BackColor = Color.FromArgb(245, 247, 250);
-            Font = new Font("Segoe UI", 9f);
+            MinimizeBox = false;
 
-            // ── Card panel ────────────────────────────────────────────────
-            pnlCard = new Panel
-            {
-                Size = new Size(340, 460),
-                Location = new Point(40, 40),
-                BackColor = Color.White,
-                Padding = new Padding(30)
-            };
-            pnlCard.Paint += (s, e) =>
-            {
-                e.Graphics.DrawRectangle(
-                    new Pen(Color.FromArgb(220, 220, 220), 1),
-                    0, 0, pnlCard.Width - 1, pnlCard.Height - 1);
-            };
+            BackColor = Color.FromArgb(240, 240, 240);
+            Font = new Font("Segoe UI", 9F);
 
-            // ── Judul ─────────────────────────────────────────────────────
+            // JUDUL
             lblJudul = new Label
             {
-                Text = "ApoTek",
-                Font = new Font("Segoe UI", 22f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(37, 99, 235),
-                Location = new Point(30, 30),
-                AutoSize = true
+                Text = "LOGIN SISTEM APOTEK",
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                AutoSize = true,
+                Location = new Point(75, 20),
+                ForeColor = Color.Black
             };
 
             lblSubjudul = new Label
             {
-                Text = "Sistem Manajemen Apotek",
-                Font = new Font("Segoe UI", 9f),
-                ForeColor = Color.FromArgb(100, 116, 139),
-                Location = new Point(30, 70),
-                AutoSize = true
+                Text = "Masukkan akun untuk melanjutkan",
+                AutoSize = true,
+                Location = new Point(90, 50),
+                ForeColor = Color.DimGray
             };
 
-            // ── Role ──────────────────────────────────────────────────────
+            // ROLE
             lblRole = new Label
             {
-                Text = "Login sebagai",
-                Location = new Point(30, 115),
+                Text = "Role",
                 AutoSize = true,
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+                Location = new Point(50, 95)
             };
 
             cmbRole = new ComboBox
             {
-                Location = new Point(30, 135),
-                Size = new Size(280, 28),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f)
+                Location = new Point(50, 115),
+                Size = new Size(380, 30),
+                DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbRole.Items.AddRange(new object[] { "Pramuniaga / Admin", "Pelanggan" });
+
+            cmbRole.Items.AddRange(new object[]
+            {
+        "Pramuniaga / Admin",
+        "Pelanggan"
+            });
+
             cmbRole.SelectedIndex = 0;
             cmbRole.SelectedIndexChanged += OnRoleChanged;
 
-            // ── Username / No Telp ────────────────────────────────────────
+            // USERNAME
             lblUsername = new Label
             {
                 Text = "Username",
-                Location = new Point(30, 180),
                 AutoSize = true,
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+                Location = new Point(50, 155)
             };
 
             txtUsername = new TextBox
             {
-                Location = new Point(30, 200),
-                Size = new Size(280, 28),
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 9f)
+                Location = new Point(50, 175),
+                Size = new Size(380, 27)
             };
 
-            // ── Password ──────────────────────────────────────────────────
+            // PASSWORD
             lblPassword = new Label
             {
                 Text = "Password",
-                Location = new Point(30, 245),
                 AutoSize = true,
-                ForeColor = Color.FromArgb(51, 65, 85),
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+                Location = new Point(50, 215)
             };
 
             txtPassword = new TextBox
             {
-                Location = new Point(30, 265),
-                Size = new Size(280, 28),
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 9f),
-                PasswordChar = '●',
-                UseSystemPasswordChar = false
+                Location = new Point(50, 235),
+                Size = new Size(380, 27),
+                PasswordChar = '*'
             };
+
             txtPassword.KeyDown += (s, e) =>
             {
-                if (e.KeyCode == Keys.Enter) BtnLogin_Click(s, e);
+                if (e.KeyCode == Keys.Enter)
+                    BtnLogin_Click(s, e);
             };
 
-            // ── Error label ───────────────────────────────────────────────
+            // ERROR
             lblError = new Label
             {
-                Text = "",
-                Location = new Point(30, 305),
-                Size = new Size(280, 20),
-                ForeColor = Color.FromArgb(220, 38, 38),
-                Font = new Font("Segoe UI", 8.5f),
-                AutoSize = false
+                AutoSize = false,
+                Size = new Size(380, 20),
+                Location = new Point(50, 270),
+                ForeColor = Color.DarkRed
             };
 
-            // ── Tombol Login ──────────────────────────────────────────────
+            // LOGIN
             btnLogin = new Button
             {
-                Text = "Masuk",
-                Location = new Point(30, 330),
-                Size = new Size(280, 38),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(37, 99, 235),
-                ForeColor = Color.White,
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Text = "Login",
+                Size = new Size(180, 35),
+                Location = new Point(50, 300),
+                BackColor = Color.Gainsboro
             };
-            btnLogin.FlatAppearance.BorderSize = 0;
+
             btnLogin.Click += BtnLogin_Click;
 
-            // ── Tombol Daftar ─────────────────────────────────────────────
+            // DAFTAR
             btnDaftar = new Button
             {
-                Text = "Belum punya akun? Daftar",
-                Location = new Point(30, 380),
-                Size = new Size(280, 30),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.Transparent,
-                ForeColor = Color.FromArgb(37, 99, 235),
-                Font = new Font("Segoe UI", 9f),
-                Cursor = Cursors.Hand,
+                Text = "Daftar Akun",
+                Size = new Size(180, 35),
+                Location = new Point(250, 300),
+                BackColor = Color.Gainsboro,
                 Visible = false
             };
-            btnDaftar.FlatAppearance.BorderSize = 0;
+
             btnDaftar.Click += BtnDaftar_Click;
 
-            // ── Susun controls ────────────────────────────────────────────
-            pnlCard.Controls.AddRange(new Control[]
+            Controls.AddRange(new Control[]
             {
-                lblJudul, lblSubjudul,
-                lblRole, cmbRole,
-                lblUsername, txtUsername,
-                lblPassword, txtPassword,
-                lblError, btnLogin, btnDaftar
-            });
+                lblJudul,
+                lblSubjudul,
 
-            Controls.Add(pnlCard);
+                lblRole,
+                cmbRole,
+
+                lblUsername,
+                txtUsername,
+
+                lblPassword,
+                txtPassword,
+
+                lblError,
+
+                btnLogin,
+                btnDaftar
+            });
         }
 
         // ── Event: ganti role ──────────────────────────────────────────────
         private void OnRoleChanged(object? sender, EventArgs e)
         {
             bool isPelanggan = cmbRole.SelectedIndex == 1;
-            lblUsername.Text = isPelanggan ? "No. Telepon" : "Username";
+
+            lblUsername.Text = isPelanggan
+                ? "No. Telepon"
+                : "Username";
+
             btnDaftar.Visible = isPelanggan;
+
             lblError.Text = "";
         }
 
@@ -228,8 +212,17 @@ namespace PROJECTKPL.GUI
                     if (inputIdentitas == "admin" && inputPassword == "admin123")
                     {
                         var dashboard = new FormDashboard(_http);
+
                         Hide();
-                        dashboard.FormClosed += (s, args) => Close();
+
+                        dashboard.FormClosed += (s, args) =>
+                        {
+                            txtUsername.Clear();
+                            txtPassword.Clear();
+                            lblError.Text = "";
+                            Show();
+                        };
+
                         dashboard.Show();
                     }
                     else
@@ -247,8 +240,17 @@ namespace PROJECTKPL.GUI
                     {
                         var json = await res.Content.ReadFromJsonAsync<JsonElement>();
                         var formMenu = new FormMenuPelanggan(_http, json);
+
                         Hide();
-                        formMenu.FormClosed += (s, args) => Close();
+
+                        formMenu.FormClosed += (s, args) =>
+                        {
+                            txtUsername.Clear();
+                            txtPassword.Clear();
+                            lblError.Text = "";
+                            Show();
+                        };
+
                         formMenu.Show();
                     }
                     else
@@ -276,3 +278,4 @@ namespace PROJECTKPL.GUI
         }
 
     }
+}
