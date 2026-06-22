@@ -39,9 +39,11 @@ namespace PROJECTKPL.API.Repositories
             existing.NamaObat = obat.NamaObat;
             existing.Harga = obat.Harga;
             existing.SetStok(obat.Stok);
+
             await _db.SaveChangesAsync();
             return existing;
         }
+
 
         public async Task<bool> DeleteAsync(int id)
         {

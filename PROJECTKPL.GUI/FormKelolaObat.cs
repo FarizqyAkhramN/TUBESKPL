@@ -193,6 +193,16 @@ namespace PROJECTKPL.GUI
                 }
 
                 lblStatus.Text = $"Total: {data.Count} obat | MODE: {currentMode}";
+                // jangan ada row yang otomatis terpilih
+                dgvObat.ClearSelection();
+
+                try
+                {
+                    dgvObat.CurrentCell = null;
+                }
+                catch
+                {
+                }
             }
             catch
             {
@@ -205,47 +215,118 @@ namespace PROJECTKPL.GUI
         {
             if (currentMode == Mode.Edit)
             {
-                lblStatus.Text = "Selesaikan edit dulu (reset).";
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Selesaikan edit dulu (Refresh untuk kembali ke mode tambah).";
                 return;
             }
 
-            if (!Validate(out int stok, out int harga)) return;
+            if (!Validate(out int stok, out int harga))
+                return;
 
-            await _http.PostAsJsonAsync("api/obat", new
+            string namaBaru = txtNama.Text.Trim();
+
+            // Cek duplikat nama obat dari data yang ada di grid
+            foreach (DataGridViewRow row in dgvObat.Rows)
             {
-                namaObat = txtNama.Text.Trim(),
-                stok,
-                harga
-            });
+                if (row.IsNewRow) continue;
 
-            lblStatus.Text = "Obat ditambahkan.";
+                string namaExisting =
+                    row.Cells["NamaObat"].Value?.ToString()?.Trim() ?? "";
 
-            await RefreshAll();
+                if (namaExisting.Equals(
+                    namaBaru,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                    lblStatus.Text = "Nama obat sudah terdaftar.";
+                    return;
+                }
+            }
+
+            try
+            {
+                var res = await _http.PostAsJsonAsync("api/obat", new
+                {
+                    namaObat = namaBaru,
+                    stok,
+                    harga
+                });
+
+                if (res.IsSuccessStatusCode)
+                {
+                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
+                    lblStatus.Text = "Obat berhasil ditambahkan.";
+
+                    await RefreshAll();
+                }
+                else
+                {
+                    string msg = await res.Content.ReadAsStringAsync();
+
+                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                    lblStatus.Text = $"Gagal: {msg}";
+                }
+            }
+            catch
+            {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Tidak dapat terhubung ke server.";
+            }
         }
 
         // ================= EDIT =================
-        private async void BtnEditStok_Click(object sender, EventArgs e)
+        private async void BtnEditStok_Click(object? sender, EventArgs e)
         {
             if (selectedObatId == null)
             {
-                lblStatus.Text = "Pilih obat dulu.";
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Pilih obat yang ingin diedit.";
+                return;
+            }
+            if (!int.TryParse(txtStok.Text, out int stokBaru) || stokBaru < 0)
+            {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Stok harus berupa angka >= 0.";
+                return;
+            }
+            if (!int.TryParse(txtHarga.Text, out int harga) || harga <= 0)
+            {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Harga harus berupa angka > 0.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(txtNama.Text))
+            {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Nama obat harus diisi.";
                 return;
             }
 
-            if (!int.TryParse(txtStok.Text, out int stokBaru))
+            int id = selectedObatId.Value;
+            try
             {
-                lblStatus.Text = "Stok tidak valid.";
-                return;
+                // Kirim ke endpoint PUT api/obat/{id}
+                var res = await _http.PutAsJsonAsync($"api/obat/{id}",
+                    new { namaObat = txtNama.Text.Trim(), stokBaru, harga });
+
+                if (res.IsSuccessStatusCode)
+                {
+                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
+                    lblStatus.Text = "Obat berhasil diperbarui.";
+                    await RefreshAll();
+                }
+                else
+                {
+                    string msg = await res.Content.ReadAsStringAsync();
+                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                    lblStatus.Text = $"Gagal: {msg}";
+                }
             }
-
-            await _http.PutAsJsonAsync($"api/obat/{selectedObatId}/stok", new
+            catch
             {
-                stokBaru
-            });
-
-            lblStatus.Text = "Stok diupdate.";
-
-            await RefreshAll();
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Tidak dapat terhubung ke server.";
+            }
         }
 
         // ================= DELETE =================
@@ -253,15 +334,42 @@ namespace PROJECTKPL.GUI
         {
             if (selectedObatId == null)
             {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
                 lblStatus.Text = "Pilih obat dulu.";
                 return;
             }
 
-            await _http.DeleteAsync($"api/obat/{selectedObatId}");
+            var result = MessageBox.Show(
+                "Yakin ingin menghapus obat ini?",
+                "Konfirmasi Hapus",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
 
-            lblStatus.Text = "Obat dihapus.";
+            if (result != DialogResult.Yes)
+                return;
 
-            await RefreshAll();
+            try
+            {
+                var res = await _http.DeleteAsync($"api/obat/{selectedObatId.Value}");
+
+                if (res.IsSuccessStatusCode)
+                {
+                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
+                    lblStatus.Text = "Obat berhasil dihapus.";
+
+                    await RefreshAll();
+                }
+                else
+                {
+                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                    lblStatus.Text = "Gagal menghapus obat.";
+                }
+            }
+            catch
+            {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
+                lblStatus.Text = "Tidak dapat terhubung ke server.";
+            }
         }
 
         // ================= REFRESH + RESET =================
@@ -274,15 +382,24 @@ namespace PROJECTKPL.GUI
         // ================= RESET STATE (IMPORTANT) =================
         private void ResetForm()
         {
-            txtNama.Clear();
-            txtStok.Clear();
-            txtHarga.Clear();
-
             selectedObatId = null;
             currentMode = Mode.Add;
 
             dgvObat.ClearSelection();
 
+            try
+            {
+                dgvObat.CurrentCell = null;
+            }
+            catch
+            {
+            }
+
+            txtNama.Text = "";
+            txtStok.Text = "";
+            txtHarga.Text = "";
+
+            lblStatus.ForeColor = Color.FromArgb(100, 116, 139);
             lblStatus.Text = "MODE: ADD";
         }
 

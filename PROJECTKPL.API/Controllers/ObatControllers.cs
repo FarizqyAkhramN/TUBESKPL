@@ -90,5 +90,6 @@ namespace PROJECTKPL.API.Controllers
     }
 
     public record ObatRequest(string NamaObat, int Stok, int Harga);
-    public record EditStokRequest(int StokBaru);
+    public record ObatUpdateRequest(string NamaObat, int StokBaru, int Harga);
+
 }
