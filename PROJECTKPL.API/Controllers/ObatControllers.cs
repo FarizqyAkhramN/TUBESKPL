@@ -54,18 +54,24 @@ namespace PROJECTKPL.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
-        // PUT api/obat/{id}/stok
-        [HttpPut("{id}/stok")]
-        public async Task<IActionResult> EditStok(int id, [FromBody] EditStokRequest req)
+        // PUT api/obat/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] ObatUpdateRequest req)
         {
             var obat = await _repo.GetByIdAsync(id);
             if (obat == null) return NotFound("Data tidak ditemukan.");
 
-            // Validasi ruleset Stok saja
             if (req.StokBaru < 0)
                 return BadRequest("Stok tidak boleh negatif.");
+            if (req.Harga <= 0)
+                return BadRequest("Harga harus lebih dari 0.");
+            if (string.IsNullOrWhiteSpace(req.NamaObat))
+                return BadRequest("Nama obat harus diisi.");
 
+            obat.NamaObat = req.NamaObat;
+            obat.Harga = req.Harga;
             obat.SetStok(req.StokBaru);
+
             var updated = await _repo.UpdateAsync(obat);
             return Ok(updated);
         }
