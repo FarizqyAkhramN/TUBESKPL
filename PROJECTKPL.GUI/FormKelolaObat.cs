@@ -1,46 +1,37 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using PROJECTKPL.GUI.Services;
 
 namespace PROJECTKPL.GUI
 {
     public class FormKelolaObat : Form
     {
-        private enum Mode
-        {
-            Add,
-            Edit
-        }
-
+        private enum Mode { Add, Edit }
         private Mode currentMode = Mode.Add;
 
         private Label lblJudul;
         private Label lblStatus;
-
         private DataGridView dgvObat;
         private Panel pnlForm;
-
         private TextBox txtNama;
         private TextBox txtStok;
         private TextBox txtHarga;
-
         private Button btnTambah;
         private Button btnEditStok;
         private Button btnHapus;
         private Button btnRefresh;
 
-        private readonly HttpClient _http;
-
+        // Facade Pattern — pakai ObatService bukan HttpClient langsung
+        private readonly ObatService _obatService;
         private int? selectedObatId = null;
 
-        public FormKelolaObat(HttpClient http)
+        public FormKelolaObat(ObatService obatService)
         {
-            _http = http;
+            _obatService = obatService;
             InitializeComponent();
             _ = LoadObatAsync();
         }
@@ -75,13 +66,11 @@ namespace PROJECTKPL.GUI
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
-
             dgvObat.Columns.Add("Id", "ID");
             dgvObat.Columns.Add("NamaObat", "Nama Obat");
             dgvObat.Columns.Add("Stok", "Stok");
             dgvObat.Columns.Add("Status", "Status");
             dgvObat.Columns.Add("Harga", "Harga");
-
             dgvObat.CellClick += DgvObat_CellClick;
 
             // ================= FORM =================
@@ -91,14 +80,9 @@ namespace PROJECTKPL.GUI
                 Size = new Size(660, 170),
                 BackColor = Color.White
             };
-
             pnlForm.Paint += (s, e) =>
-            {
-                e.Graphics.DrawRectangle(
-                    new Pen(Color.FromArgb(226, 232, 240)),
-                    0, 0, pnlForm.Width - 1, pnlForm.Height - 1
-                );
-            };
+                e.Graphics.DrawRectangle(new Pen(Color.FromArgb(226, 232, 240)),
+                    0, 0, pnlForm.Width - 1, pnlForm.Height - 1);
 
             var lblForm = new Label
             {
@@ -117,7 +101,7 @@ namespace PROJECTKPL.GUI
             var lblHarga = new Label { Text = "Harga", Location = new Point(355, 35), AutoSize = true };
 
             btnTambah = CreateButton("Tambah", Color.FromArgb(37, 99, 235), 15);
-            btnEditStok = CreateButton("Edit Stok", Color.FromArgb(234, 179, 8), 115);
+            btnEditStok = CreateButton("Edit", Color.FromArgb(234, 179, 8), 115);
             btnHapus = CreateButton("Hapus", Color.FromArgb(220, 38, 38), 215);
             btnRefresh = CreateButton("Refresh", Color.FromArgb(100, 116, 139), 315);
 
@@ -142,30 +126,20 @@ namespace PROJECTKPL.GUI
                 ForeColor = Color.FromArgb(100, 116, 139)
             };
 
-            Controls.AddRange(new Control[]
-            {
-                lblJudul,
-                dgvObat,
-                pnlForm,
-                lblStatus
-            });
+            Controls.AddRange(new Control[] { lblJudul, dgvObat, pnlForm, lblStatus });
         }
 
         // ================= GRID CLICK =================
         private void DgvObat_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-
             var row = dgvObat.Rows[e.RowIndex];
-
             selectedObatId = Convert.ToInt32(row.Cells["Id"].Value);
-
             txtNama.Text = row.Cells["NamaObat"].Value?.ToString();
             txtStok.Text = row.Cells["Stok"].Value?.ToString();
-            txtHarga.Text = row.Cells["Harga"].Value?.ToString().Replace("Rp", "");
-
+            txtHarga.Text = row.Cells["Harga"].Value?.ToString()?.Replace("Rp", "");
             currentMode = Mode.Edit;
-
+            lblStatus.ForeColor = Color.FromArgb(37, 99, 235);
             lblStatus.Text = "MODE: EDIT";
         }
 
@@ -174,13 +148,9 @@ namespace PROJECTKPL.GUI
         {
             try
             {
-                var res = await _http.GetAsync("api/obat");
-                if (!res.IsSuccessStatusCode) return;
-
-                var data = await res.Content.ReadFromJsonAsync<List<JsonElement>>() ?? new();
-
+                // Facade Pattern — cukup panggil service
+                var data = await _obatService.GetAllAsync();
                 dgvObat.Rows.Clear();
-
                 foreach (var o in data)
                 {
                     dgvObat.Rows.Add(
@@ -191,21 +161,14 @@ namespace PROJECTKPL.GUI
                         $"Rp{o.GetProperty("harga").GetInt32()}"
                     );
                 }
-
+                lblStatus.ForeColor = Color.FromArgb(100, 116, 139);
                 lblStatus.Text = $"Total: {data.Count} obat | MODE: {currentMode}";
-                // jangan ada row yang otomatis terpilih
                 dgvObat.ClearSelection();
-
-                try
-                {
-                    dgvObat.CurrentCell = null;
-                }
-                catch
-                {
-                }
+                try { dgvObat.CurrentCell = null; } catch { }
             }
             catch
             {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
                 lblStatus.Text = "Gagal load data.";
             }
         }
@@ -219,23 +182,16 @@ namespace PROJECTKPL.GUI
                 lblStatus.Text = "Selesaikan edit dulu (Refresh untuk kembali ke mode tambah).";
                 return;
             }
-
-            if (!Validate(out int stok, out int harga))
-                return;
+            if (!Validate(out int stok, out int harga)) return;
 
             string namaBaru = txtNama.Text.Trim();
 
-            // Cek duplikat nama obat dari data yang ada di grid
+            // Cek duplikat nama dari grid
             foreach (DataGridViewRow row in dgvObat.Rows)
             {
                 if (row.IsNewRow) continue;
-
-                string namaExisting =
-                    row.Cells["NamaObat"].Value?.ToString()?.Trim() ?? "";
-
-                if (namaExisting.Equals(
-                    namaBaru,
-                    StringComparison.OrdinalIgnoreCase))
+                string namaExisting = row.Cells["NamaObat"].Value?.ToString()?.Trim() ?? "";
+                if (namaExisting.Equals(namaBaru, StringComparison.OrdinalIgnoreCase))
                 {
                     lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
                     lblStatus.Text = "Nama obat sudah terdaftar.";
@@ -243,34 +199,17 @@ namespace PROJECTKPL.GUI
                 }
             }
 
-            try
+            var (sukses, pesan) = await _obatService.TambahAsync(namaBaru, stok, harga);
+            if (sukses)
             {
-                var res = await _http.PostAsJsonAsync("api/obat", new
-                {
-                    namaObat = namaBaru,
-                    stok,
-                    harga
-                });
-
-                if (res.IsSuccessStatusCode)
-                {
-                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
-                    lblStatus.Text = "Obat berhasil ditambahkan.";
-
-                    await RefreshAll();
-                }
-                else
-                {
-                    string msg = await res.Content.ReadAsStringAsync();
-
-                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                    lblStatus.Text = $"Gagal: {msg}";
-                }
+                lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
+                lblStatus.Text = "Obat berhasil ditambahkan.";
+                await RefreshAll();
             }
-            catch
+            else
             {
                 lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Tidak dapat terhubung ke server.";
+                lblStatus.Text = $"Gagal: {pesan}";
             }
         }
 
@@ -302,34 +241,21 @@ namespace PROJECTKPL.GUI
                 return;
             }
 
-            int id = selectedObatId.Value;
-            try
+            var (sukses, pesan) = await _obatService.EditAsync(selectedObatId.Value, txtNama.Text.Trim(), stokBaru, harga);
+            if (sukses)
             {
-                // Kirim ke endpoint PUT api/obat/{id}
-                var res = await _http.PutAsJsonAsync($"api/obat/{id}",
-                    new { namaObat = txtNama.Text.Trim(), stokBaru, harga });
-
-                if (res.IsSuccessStatusCode)
-                {
-                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
-                    lblStatus.Text = "Obat berhasil diperbarui.";
-                    await RefreshAll();
-                }
-                else
-                {
-                    string msg = await res.Content.ReadAsStringAsync();
-                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                    lblStatus.Text = $"Gagal: {msg}";
-                }
+                lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
+                lblStatus.Text = "Obat berhasil diperbarui.";
+                await RefreshAll();
             }
-            catch
+            else
             {
                 lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Tidak dapat terhubung ke server.";
+                lblStatus.Text = $"Gagal: {pesan}";
             }
         }
 
-        // ================= DELETE =================
+        // ================= HAPUS =================
         private async void BtnHapus_Click(object sender, EventArgs e)
         {
             if (selectedObatId == null)
@@ -339,66 +265,39 @@ namespace PROJECTKPL.GUI
                 return;
             }
 
-            var result = MessageBox.Show(
-                "Yakin ingin menghapus obat ini?",
-                "Konfirmasi Hapus",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
+            if (MessageBox.Show("Yakin ingin menghapus obat ini?", "Konfirmasi Hapus",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
-            if (result != DialogResult.Yes)
-                return;
-
-            try
+            var (sukses, _) = await _obatService.HapusAsync(selectedObatId.Value);
+            if (sukses)
             {
-                var res = await _http.DeleteAsync($"api/obat/{selectedObatId.Value}");
-
-                if (res.IsSuccessStatusCode)
-                {
-                    lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
-                    lblStatus.Text = "Obat berhasil dihapus.";
-
-                    await RefreshAll();
-                }
-                else
-                {
-                    lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                    lblStatus.Text = "Gagal menghapus obat.";
-                }
+                lblStatus.ForeColor = Color.FromArgb(22, 163, 74);
+                lblStatus.Text = "Obat berhasil dihapus.";
+                await RefreshAll();
             }
-            catch
+            else
             {
                 lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
-                lblStatus.Text = "Tidak dapat terhubung ke server.";
+                lblStatus.Text = "Gagal menghapus obat.";
             }
         }
 
-        // ================= REFRESH + RESET =================
+        // ================= REFRESH =================
         private async Task RefreshAll()
         {
             ResetForm();
             await LoadObatAsync();
         }
 
-        // ================= RESET STATE (IMPORTANT) =================
         private void ResetForm()
         {
             selectedObatId = null;
             currentMode = Mode.Add;
-
             dgvObat.ClearSelection();
-
-            try
-            {
-                dgvObat.CurrentCell = null;
-            }
-            catch
-            {
-            }
-
+            try { dgvObat.CurrentCell = null; } catch { }
             txtNama.Text = "";
             txtStok.Text = "";
             txtHarga.Text = "";
-
             lblStatus.ForeColor = Color.FromArgb(100, 116, 139);
             lblStatus.Text = "MODE: ADD";
         }
@@ -406,43 +305,22 @@ namespace PROJECTKPL.GUI
         // ================= VALIDATION =================
         private bool Validate(out int stok, out int harga)
         {
-            stok = 0;
-            harga = 0;
-
-            if (string.IsNullOrWhiteSpace(txtNama.Text))
-            {
-                lblStatus.Text = "Nama wajib diisi.";
-                return false;
-            }
-
-            if (!int.TryParse(txtStok.Text, out stok))
-            {
-                lblStatus.Text = "Stok tidak valid.";
-                return false;
-            }
-
-            if (!int.TryParse(txtHarga.Text, out harga))
-            {
-                lblStatus.Text = "Harga tidak valid.";
-                return false;
-            }
-
+            stok = harga = 0;
+            if (string.IsNullOrWhiteSpace(txtNama.Text)) { lblStatus.Text = "Nama wajib diisi."; return false; }
+            if (!int.TryParse(txtStok.Text, out stok)) { lblStatus.Text = "Stok tidak valid."; return false; }
+            if (!int.TryParse(txtHarga.Text, out harga)) { lblStatus.Text = "Harga tidak valid."; return false; }
             return true;
         }
 
-        // ================= BUTTON FACTORY =================
-        private Button CreateButton(string text, Color color, int left)
+        private Button CreateButton(string text, Color color, int left) => new Button
         {
-            return new Button
-            {
-                Text = text,
-                Location = new Point(left, 105),
-                Size = new Size(90, 32),
-                BackColor = color,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
-            };
-        }
+            Text = text,
+            Location = new Point(left, 105),
+            Size = new Size(90, 32),
+            BackColor = color,
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+        };
     }
 }

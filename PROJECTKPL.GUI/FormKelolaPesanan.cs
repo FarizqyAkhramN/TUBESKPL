@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using PROJECTKPL.GUI.Services;
 
 namespace PROJECTKPL.GUI
 {
@@ -13,23 +12,21 @@ namespace PROJECTKPL.GUI
     {
         private Label lblJudul;
         private Label lblStatus;
-
         private DataGridView dgvPesanan;
         private Panel pnlAksi;
-
         private Button btnKonfirmasi;
         private Button btnSiapkan;
         private Button btnSelesai;
         private Button btnBatalkan;
         private Button btnRefresh;
 
-        private readonly HttpClient _http;
-
+        // Facade Pattern — pakai PesananService bukan HttpClient langsung
+        private readonly PesananService _pesananService;
         private int? selectedPesananId = null;
 
-        public FormKelolaPesanan(HttpClient http)
+        public FormKelolaPesanan(PesananService pesananService)
         {
-            _http = http;
+            _pesananService = pesananService;
             InitializeComponent();
             _ = LoadPesananAsync();
         }
@@ -64,7 +61,6 @@ namespace PROJECTKPL.GUI
                 RowHeadersVisible = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
-
             dgvPesanan.Columns.Add("Id", "ID");
             dgvPesanan.Columns.Add("IdPesanan", "ID Pesanan");
             dgvPesanan.Columns.Add("Pelanggan", "Pelanggan");
@@ -73,7 +69,6 @@ namespace PROJECTKPL.GUI
             dgvPesanan.Columns.Add("Metode", "Metode");
             dgvPesanan.Columns.Add("Pembayaran", "Pembayaran");
             dgvPesanan.Columns.Add("Status", "Status");
-
             dgvPesanan.CellClick += DgvPesanan_CellClick;
 
             // ================= ACTION PANEL =================
@@ -83,14 +78,9 @@ namespace PROJECTKPL.GUI
                 Size = new Size(660, 80),
                 BackColor = Color.White
             };
-
             pnlAksi.Paint += (s, e) =>
-            {
-                e.Graphics.DrawRectangle(
-                    new Pen(Color.FromArgb(226, 232, 240)),
-                    0, 0, pnlAksi.Width - 1, pnlAksi.Height - 1
-                );
-            };
+                e.Graphics.DrawRectangle(new Pen(Color.FromArgb(226, 232, 240)),
+                    0, 0, pnlAksi.Width - 1, pnlAksi.Height - 1);
 
             var lblAksi = new Label
             {
@@ -107,6 +97,7 @@ namespace PROJECTKPL.GUI
             btnBatalkan = CreateButton("Batalkan", new Point(330, 35), Color.FromArgb(220, 38, 38));
             btnRefresh = CreateButton("Refresh", new Point(560, 35), Color.FromArgb(100, 116, 139));
 
+            // Facade Pattern — cukup panggil service
             btnKonfirmasi.Click += async (s, e) => await Trigger("Konfirmasi");
             btnSiapkan.Click += async (s, e) => await Trigger("Siapkan");
             btnSelesai.Click += async (s, e) => await Trigger("AmbilDanBayar");
@@ -116,11 +107,7 @@ namespace PROJECTKPL.GUI
             pnlAksi.Controls.AddRange(new Control[]
             {
                 lblAksi,
-                btnKonfirmasi,
-                btnSiapkan,
-                btnSelesai,
-                btnBatalkan,
-                btnRefresh
+                btnKonfirmasi, btnSiapkan, btnSelesai, btnBatalkan, btnRefresh
             });
 
             // ================= STATUS =================
@@ -133,24 +120,16 @@ namespace PROJECTKPL.GUI
                 Text = "READY"
             };
 
-            Controls.AddRange(new Control[]
-            {
-                lblJudul,
-                dgvPesanan,
-                pnlAksi,
-                lblStatus
-            });
+            Controls.AddRange(new Control[] { lblJudul, dgvPesanan, pnlAksi, lblStatus });
         }
 
         // ================= GRID CLICK =================
         private void DgvPesanan_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-
             var row = dgvPesanan.Rows[e.RowIndex];
-
             selectedPesananId = Convert.ToInt32(row.Cells["Id"].Value);
-
+            lblStatus.ForeColor = Color.FromArgb(37, 99, 235);
             lblStatus.Text = $"Selected ID: {selectedPesananId}";
         }
 
@@ -159,40 +138,33 @@ namespace PROJECTKPL.GUI
         {
             try
             {
-                var res = await _http.GetAsync("api/pesanan");
-                if (!res.IsSuccessStatusCode) return;
-
-                var list = await res.Content.ReadFromJsonAsync<List<JsonElement>>() ?? new();
-
+                // Facade Pattern — cukup panggil service
+                var list = await _pesananService.GetAllAsync();
                 dgvPesanan.Rows.Clear();
-
                 foreach (var p in list)
                 {
-                    string pelanggan = "-";
-                    string obat = "-";
-
-                    if (p.TryGetProperty("pelanggan", out var pel))
+                    string pelanggan = "-", obat = "-";
+                    if (p.TryGetProperty("pelanggan", out var pel) && pel.ValueKind != JsonValueKind.Null)
                         pelanggan = pel.GetProperty("username").GetString() ?? "-";
-
-                    if (p.TryGetProperty("obat", out var ob))
+                    if (p.TryGetProperty("obat", out var ob) && ob.ValueKind != JsonValueKind.Null)
                         obat = ob.GetProperty("namaObat").GetString() ?? "-";
 
                     dgvPesanan.Rows.Add(
                         p.GetProperty("id").GetInt32(),
                         p.GetProperty("idPesanan").GetString(),
-                        pelanggan,
-                        obat,
+                        pelanggan, obat,
                         p.GetProperty("jumlah").GetInt32(),
                         p.GetProperty("metodePengambilan").GetString(),
                         $"Rp{p.GetProperty("pembayaran").GetInt32()}",
                         p.GetProperty("status").GetString()
                     );
                 }
-
+                lblStatus.ForeColor = Color.FromArgb(100, 116, 139);
                 lblStatus.Text = $"Total: {list.Count} pesanan";
             }
             catch
             {
+                lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
                 lblStatus.Text = "Gagal load data.";
             }
         }
@@ -200,49 +172,24 @@ namespace PROJECTKPL.GUI
         // ================= TRIGGER STATE MACHINE =================
         private async Task Trigger(string trigger)
         {
-            if (selectedPesananId == null)
-            {
-                lblStatus.Text = "Pilih pesanan dulu.";
-                return;
-            }
+            if (selectedPesananId == null) { lblStatus.Text = "Pilih pesanan dulu."; return; }
 
-            try
-            {
-                var res = await _http.PutAsJsonAsync(
-                    $"api/pesanan/{selectedPesananId}/trigger",
-                    new { trigger }
-                );
-
-                if (res.IsSuccessStatusCode)
-                {
-                    lblStatus.Text = $"Status updated: {trigger}";
-                    await LoadPesananAsync();
-                }
-                else
-                {
-                    lblStatus.Text = "Gagal update status.";
-                }
-            }
-            catch
-            {
-                lblStatus.Text = "Server tidak bisa diakses.";
-            }
+            var (sukses, pesan) = await _pesananService.AktifkanTriggerAsync(selectedPesananId.Value, trigger);
+            lblStatus.ForeColor = sukses ? Color.FromArgb(22, 163, 74) : Color.FromArgb(220, 38, 38);
+            lblStatus.Text = sukses ? $"Status updated: {trigger}" : $"Gagal: {pesan}";
+            if (sukses) await LoadPesananAsync();
         }
 
-        // ================= BUTTON FACTORY =================
-        private Button CreateButton(string text, Point loc, Color color)
+        private Button CreateButton(string text, Point loc, Color color) => new Button
         {
-            return new Button
-            {
-                Text = text,
-                Location = loc,
-                Size = new Size(100, 28),
-                BackColor = color,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-        }
+            Text = text,
+            Location = loc,
+            Size = new Size(100, 28),
+            BackColor = color,
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
     }
 }

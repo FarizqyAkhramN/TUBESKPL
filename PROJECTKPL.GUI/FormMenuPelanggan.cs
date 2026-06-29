@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Drawing;
-using System.Net.Http;
 using System.Text.Json;
 using System.Windows.Forms;
+using PROJECTKPL.GUI.Services;
 
 namespace PROJECTKPL.GUI
 {
@@ -10,27 +10,29 @@ namespace PROJECTKPL.GUI
     {
         private Panel pnlSidebar;
         private Panel pnlContent;
-
         private Label lblNama;
-
         private Button btnLihatObat;
         private Button btnPesanObat;
         private Button btnRiwayat;
         private Button btnGantiPassword;
         private Button btnLogout;
-
         private Button? btnAktif;
 
-        private readonly HttpClient _http;
+        // Facade Pattern — terima service dari FormLogin
+        private readonly ObatService _obatService;
+        private readonly PelangganService _pelangganService;
+        private readonly PesananService _pesananService;
         private readonly JsonElement _pelangganData;
         private readonly int _pelangganId;
         private readonly string _username;
 
-        public FormMenuPelanggan(HttpClient http, JsonElement pelangganData)
+        public FormMenuPelanggan(ObatService obatService, PelangganService pelangganService,
+            PesananService pesananService, JsonElement pelangganData)
         {
-            _http = http;
+            _obatService = obatService;
+            _pelangganService = pelangganService;
+            _pesananService = pesananService;
             _pelangganData = pelangganData;
-
             _pelangganId = pelangganData.GetProperty("id").GetInt32();
             _username = pelangganData.GetProperty("username").GetString() ?? "";
 
@@ -38,7 +40,7 @@ namespace PROJECTKPL.GUI
 
             // Menu default
             SetMenuAktif(btnLihatObat);
-            TampilForm(new FormDaftarObat(_http));
+            TampilForm(new FormDaftarObat(_obatService));
         }
 
         private void InitializeComponent()
@@ -87,37 +89,37 @@ namespace PROJECTKPL.GUI
             };
 
             btnLihatObat = BuatTombolSidebar("Lihat Obat", 115);
+            btnPesanObat = BuatTombolSidebar("Pesan Obat", 160);
+            btnRiwayat = BuatTombolSidebar("Riwayat Pembelian", 205);
+            btnGantiPassword = BuatTombolSidebar("Ganti Password", 250);
+
+            // Facade Pattern — teruskan service ke sub-form
             btnLihatObat.Click += (s, e) =>
             {
                 SetMenuAktif(btnLihatObat);
-                TampilForm(new FormDaftarObat(_http));
+                TampilForm(new FormDaftarObat(_obatService));
             };
 
-            btnPesanObat = BuatTombolSidebar("Pesan Obat", 160);
             btnPesanObat.Click += (s, e) =>
             {
                 SetMenuAktif(btnPesanObat);
-                TampilForm(new FormPesanan(_http, _pelangganId));
+                TampilForm(new FormPesanan(_obatService, _pesananService, _pelangganId));
             };
 
-            btnRiwayat = BuatTombolSidebar("Riwayat Pembelian", 205);
             btnRiwayat.Click += (s, e) =>
             {
                 SetMenuAktif(btnRiwayat);
-                TampilForm(new FormRiwayat(_http, _pelangganId));
+                TampilForm(new FormRiwayat(_pesananService, _pelangganId));
             };
 
-            btnGantiPassword = BuatTombolSidebar("Ganti Password", 250);
             btnGantiPassword.Click += (s, e) =>
             {
                 SetMenuAktif(btnGantiPassword);
-
                 using var form = new FormGantiPassword(
-                    _http,
+                    _pelangganService,
                     _pelangganId,
                     _pelangganData.GetProperty("noTelp").GetString() ?? ""
                 );
-
                 form.ShowDialog(this);
             };
 
@@ -132,49 +134,26 @@ namespace PROJECTKPL.GUI
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(20, 0, 0, 0),
                 Cursor = Cursors.Hand,
-                Anchor = AnchorStyles.Left |
-                         AnchorStyles.Right |
-                         AnchorStyles.Bottom
+                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
             };
-
             btnLogout.FlatAppearance.BorderSize = 0;
-            btnLogout.FlatAppearance.MouseOverBackColor =
-                Color.FromArgb(51, 65, 85);
-
-            btnLogout.Location =
-                new Point(0, pnlSidebar.Height - 50);
-
+            btnLogout.FlatAppearance.MouseOverBackColor = Color.FromArgb(51, 65, 85);
+            btnLogout.Location = new Point(0, pnlSidebar.Height - 50);
             pnlSidebar.Resize += (s, e) =>
             {
-                btnLogout.Location =
-                    new Point(0, pnlSidebar.Height - 50);
+                btnLogout.Location = new Point(0, pnlSidebar.Height - 50);
             };
-
             btnLogout.Click += (s, e) =>
             {
-                var result = MessageBox.Show(
-                    "Yakin ingin logout?",
-                    "Konfirmasi Logout",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question
-                );
-
-                if (result == DialogResult.Yes)
-                {
+                if (MessageBox.Show("Yakin ingin logout?", "Konfirmasi Logout",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     Close();
-                }
             };
 
             pnlSidebar.Controls.AddRange(new Control[]
             {
-                lblJudul,
-                lblNama,
-                sep,
-                btnLihatObat,
-                btnPesanObat,
-                btnRiwayat,
-                btnGantiPassword,
-                btnLogout
+                lblJudul, lblNama, sep,
+                btnLihatObat, btnPesanObat, btnRiwayat, btnGantiPassword, btnLogout
             });
 
             // =====================================================
@@ -190,9 +169,6 @@ namespace PROJECTKPL.GUI
             Controls.Add(pnlSidebar);
         }
 
-        // =====================================================
-        // SIDEBAR BUTTON
-        // =====================================================
         private Button BuatTombolSidebar(string text, int top)
         {
             var btn = new Button
@@ -208,17 +184,11 @@ namespace PROJECTKPL.GUI
                 Padding = new Padding(20, 0, 0, 0),
                 Cursor = Cursors.Hand
             };
-
             btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor =
-                Color.FromArgb(51, 65, 85);
-
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(51, 65, 85);
             return btn;
         }
 
-        // =====================================================
-        // ACTIVE MENU
-        // =====================================================
         private void SetMenuAktif(Button btn)
         {
             if (btnAktif != null)
@@ -226,29 +196,19 @@ namespace PROJECTKPL.GUI
                 btnAktif.BackColor = Color.Transparent;
                 btnAktif.ForeColor = Color.FromArgb(203, 213, 225);
             }
-
             btn.BackColor = Color.FromArgb(51, 65, 85);
             btn.ForeColor = Color.White;
-
             btnAktif = btn;
         }
 
-        // =====================================================
-        // LOAD FORM
-        // =====================================================
         private void TampilForm(Form form)
         {
-            foreach (Control control in pnlContent.Controls)
-            {
-                control.Dispose();
-            }
-
+            foreach (Control c in pnlContent.Controls)
+                c.Dispose();
             pnlContent.Controls.Clear();
-
             form.TopLevel = false;
             form.FormBorderStyle = FormBorderStyle.None;
             form.Dock = DockStyle.Fill;
-
             pnlContent.Controls.Add(form);
             form.Show();
         }

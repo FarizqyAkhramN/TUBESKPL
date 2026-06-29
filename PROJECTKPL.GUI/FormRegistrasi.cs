@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http.Json;
-using System.Text;
+using System.Drawing;
+using System.Linq;
+using System.Text.Json;
+using System.Windows.Forms;
+using PROJECTKPL.GUI.Services;
 
 namespace PROJECTKPL.GUI
 {
@@ -18,11 +21,12 @@ namespace PROJECTKPL.GUI
         private Button btnBatal;
         private Label lblStatus;
 
-        private readonly HttpClient _http;
+        // Facade Pattern — pakai PelangganService bukan HttpClient langsung
+        private readonly PelangganService _pelangganService;
 
-        public FormRegistrasi(HttpClient http)
+        public FormRegistrasi(PelangganService pelangganService)
         {
-            _http = http;
+            _pelangganService = pelangganService;
             InitializeComponent();
         }
 
@@ -30,31 +34,21 @@ namespace PROJECTKPL.GUI
         {
             Text = "Registrasi Akun";
             Size = new Size(500, 620);
-
             StartPosition = FormStartPosition.CenterParent;
-
             FormBorderStyle = FormBorderStyle.FixedDialog;
-
             MaximizeBox = false;
             MinimizeBox = false;
-
             BackColor = Color.FromArgb(240, 240, 240);
-
             Font = new Font("Segoe UI", 9F);
 
             lblJudul = new Label
             {
                 Text = "REGISTRASI AKUN",
-                Font = new Font(
-                    "Segoe UI",
-                    14,
-                    FontStyle.Bold
-                ),
+                Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(150, 20)
             };
 
-            int left = 40;
             int width = 390;
             int top = 70;
 
@@ -64,97 +58,71 @@ namespace PROJECTKPL.GUI
             txtUsername = BuatTextBox(top + 20);
             txtUsername.Width = width;
             Controls.Add(txtUsername);
-
             top += 60;
 
             Controls.Add(BuatLabel("Gender", top));
-
             cmbGender = new ComboBox
             {
                 Location = new Point(20, top + 20),
                 Size = new Size(width, 27),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-
-            cmbGender.Items.AddRange(new object[]
-            {
-        "Laki-laki",
-        "Perempuan"
-            });
-
+            cmbGender.Items.AddRange(new object[] { "Laki-laki", "Perempuan" });
             cmbGender.SelectedIndex = 0;
-
             Controls.Add(cmbGender);
-
             top += 60;
 
             Controls.Add(BuatLabel("No Telepon", top));
-
             txtNoTelp = BuatTextBox(top + 20);
             txtNoTelp.Width = width;
-
             Controls.Add(txtNoTelp);
-
             top += 60;
 
             Controls.Add(BuatLabel("Umur", top));
-
             txtUmur = BuatTextBox(top + 20);
             txtUmur.Width = width;
-
             Controls.Add(txtUmur);
-
             top += 60;
 
             Controls.Add(BuatLabel("Password", top));
-
             txtPassword = BuatTextBox(top + 20);
             txtPassword.Width = width;
             txtPassword.PasswordChar = '*';
-
             Controls.Add(txtPassword);
-
             top += 60;
 
             Controls.Add(BuatLabel("Konfirmasi Password", top));
-
             txtKonfirmPassword = BuatTextBox(top + 20);
             txtKonfirmPassword.Width = width;
             txtKonfirmPassword.PasswordChar = '*';
-
             Controls.Add(txtKonfirmPassword);
-
             top += 70;
 
             lblStatus = new Label
             {
-                Location = new Point(left, top),
+                Location = new Point(40, top),
                 Size = new Size(width, 25),
                 ForeColor = Color.DarkRed
             };
-
             Controls.Add(lblStatus);
-
             top += 40;
 
             btnDaftar = new Button
             {
                 Text = "Daftar",
                 Size = new Size(185, 35),
-                Location = new Point(left, top),
+                Location = new Point(40, top),
                 BackColor = Color.Gainsboro
             };
-
             btnDaftar.Click += BtnDaftar_Click;
 
             btnBatal = new Button
             {
                 Text = "Batal",
                 Size = new Size(185, 35),
-                Location = new Point(left + 205, top),
+                Location = new Point(245, top),
                 BackColor = Color.Gainsboro
             };
-
             btnBatal.Click += (s, e) => Close();
 
             Controls.Add(btnDaftar);
@@ -182,118 +150,61 @@ namespace PROJECTKPL.GUI
         {
             lblStatus.ForeColor = Color.FromArgb(220, 38, 38);
 
-            // ── Validasi Username ─────────────────────────────────────────────
+            // ── Validasi Username ──────────────────────────────────────────────
             if (string.IsNullOrWhiteSpace(txtUsername.Text))
-            {
-                lblStatus.Text = "Username harus diisi.";
-                txtUsername.Focus();
-                return;
-            }
+            { lblStatus.Text = "Username harus diisi."; txtUsername.Focus(); return; }
             if (txtUsername.Text.Trim().Length < 3)
-            {
-                lblStatus.Text = "Username minimal 3 karakter.";
-                txtUsername.Focus();
-                return;
-            }
+            { lblStatus.Text = "Username minimal 3 karakter."; txtUsername.Focus(); return; }
             if (txtUsername.Text.Trim().Length > 50)
-            {
-                lblStatus.Text = "Username maksimal 50 karakter.";
-                txtUsername.Focus();
-                return;
-            }
+            { lblStatus.Text = "Username maksimal 50 karakter."; txtUsername.Focus(); return; }
 
-            // ── Validasi No. Telepon ──────────────────────────────────────────
+            // ── Validasi No. Telepon ───────────────────────────────────────────
             string noTelp = txtNoTelp.Text.Trim();
             if (string.IsNullOrWhiteSpace(noTelp))
-            {
-                lblStatus.Text = "No. telepon harus diisi.";
-                txtNoTelp.Focus();
-                return;
-            }
+            { lblStatus.Text = "No. telepon harus diisi."; txtNoTelp.Focus(); return; }
             if (!noTelp.StartsWith("08"))
-            {
-                lblStatus.Text = "No. telepon harus diawali dengan 08.";
-                txtNoTelp.Focus();
-                return;
-            }
+            { lblStatus.Text = "No. telepon harus diawali dengan 08."; txtNoTelp.Focus(); return; }
             if (noTelp.Length < 10 || noTelp.Length > 13)
-            {
-                lblStatus.Text = "No. telepon harus terdiri dari 10 sampai 13 digit.";
-                txtNoTelp.Focus();
-                return;
-            }
+            { lblStatus.Text = "No. telepon harus terdiri dari 10 sampai 13 digit."; txtNoTelp.Focus(); return; }
             if (!noTelp.All(char.IsDigit))
-            {
-                lblStatus.Text = "No. telepon hanya boleh berisi angka.";
-                txtNoTelp.Focus();
-                return;
-            }
+            { lblStatus.Text = "No. telepon hanya boleh berisi angka."; txtNoTelp.Focus(); return; }
 
-            // ── Validasi Umur ─────────────────────────────────────────────────
+            // ── Validasi Umur ──────────────────────────────────────────────────
             if (!int.TryParse(txtUmur.Text, out int umur))
-            {
-                lblStatus.Text = "Umur harus berupa angka.";
-                txtUmur.Focus();
-                return;
-            }
+            { lblStatus.Text = "Umur harus berupa angka."; txtUmur.Focus(); return; }
             if (umur < 1 || umur > 120)
-            {
-                lblStatus.Text = "Umur harus antara 1 sampai 120 tahun.";
-                txtUmur.Focus();
-                return;
-            }
+            { lblStatus.Text = "Umur harus antara 1 sampai 120 tahun."; txtUmur.Focus(); return; }
 
-            // ── Validasi Password ─────────────────────────────────────────────
+            // ── Validasi Password ──────────────────────────────────────────────
             string password = txtPassword.Text;
             if (string.IsNullOrEmpty(password))
-            {
-                lblStatus.Text = "Password harus diisi.";
-                txtPassword.Focus();
-                return;
-            }
+            { lblStatus.Text = "Password harus diisi."; txtPassword.Focus(); return; }
             if (password.Length < 6)
-            {
-                lblStatus.Text = "Password minimal 6 karakter.";
-                txtPassword.Focus();
-                return;
-            }
+            { lblStatus.Text = "Password minimal 6 karakter."; txtPassword.Focus(); return; }
             if (!password.Any(char.IsUpper))
-            {
-                lblStatus.Text = "Password harus mengandung 1 huruf kapital.";
-                txtPassword.Focus();
-                return;
-            }
+            { lblStatus.Text = "Password harus mengandung 1 huruf kapital."; txtPassword.Focus(); return; }
             if (!password.Any(char.IsDigit))
-            {
-                lblStatus.Text = "Password harus mengandung minimal 1 angka.";
-                txtPassword.Focus();
-                return;
-            }
+            { lblStatus.Text = "Password harus mengandung minimal 1 angka."; txtPassword.Focus(); return; }
 
-            // ── Validasi Konfirmasi Password ──────────────────────────────────
+            // ── Validasi Konfirmasi Password ───────────────────────────────────
             if (password != txtKonfirmPassword.Text)
-            {
-                lblStatus.Text = "Konfirmasi password tidak cocok.";
-                txtKonfirmPassword.Focus();
-                return;
-            }
+            { lblStatus.Text = "Konfirmasi password tidak cocok."; txtKonfirmPassword.Focus(); return; }
 
-            // ── Semua valid — kirim ke API ────────────────────────────────────
+            // ── Semua valid — kirim ke API via service (Facade Pattern) ────────
             btnDaftar.Enabled = false;
             btnDaftar.Text = "Mendaftarkan...";
 
             try
             {
-                var res = await _http.PostAsJsonAsync("api/pelanggan", new
-                {
-                    username = txtUsername.Text.Trim(),
-                    gender = cmbGender.SelectedItem?.ToString() ?? "",
+                var (sukses, pesan) = await _pelangganService.DaftarAsync(
+                    txtUsername.Text.Trim(),
+                    cmbGender.SelectedItem?.ToString() ?? "",
                     noTelp,
                     umur,
                     password
-                });
+                );
 
-                if (res.IsSuccessStatusCode)
+                if (sukses)
                 {
                     MessageBox.Show(
                         "Akun berhasil dibuat!\nSilakan login dengan akun baru Anda.",
@@ -304,12 +215,10 @@ namespace PROJECTKPL.GUI
                 }
                 else
                 {
-                    string msg = await res.Content.ReadAsStringAsync();
+                    // Coba parse error dari FluentValidation (array JSON)
                     try
                     {
-                        // Parse error dari FluentValidation (array JSON)
-                        var errors = System.Text.Json.JsonSerializer.Deserialize<
-                            List<System.Text.Json.JsonElement>>(msg);
+                        var errors = JsonSerializer.Deserialize<List<JsonElement>>(pesan);
                         if (errors != null && errors.Count > 0)
                             lblStatus.Text = errors[0].GetProperty("errorMessage").GetString()
                                 ?? "Pendaftaran gagal.";
@@ -318,10 +227,9 @@ namespace PROJECTKPL.GUI
                     }
                     catch
                     {
-                        // Jika bukan JSON (misal conflict no telp)
-                        lblStatus.Text = msg.Length > 100
+                        lblStatus.Text = pesan.Length > 100
                             ? "Pendaftaran gagal. Cek kembali data Anda."
-                            : msg.Trim('"');
+                            : pesan.Trim('"');
                     }
                 }
             }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
-using System.Net.Http;
 using System.Windows.Forms;
+using PROJECTKPL.GUI.Services;
 
 namespace PROJECTKPL.GUI
 {
@@ -20,11 +20,16 @@ namespace PROJECTKPL.GUI
 
         private Button activeButton;
 
-        private readonly HttpClient _http;
+        // Facade Pattern — terima service dari FormLogin
+        private readonly ObatService _obatService;
+        private readonly PelangganService _pelangganService;
+        private readonly PesananService _pesananService;
 
-        public FormDashboard(HttpClient http)
+        public FormDashboard(ObatService obatService, PelangganService pelangganService, PesananService pesananService)
         {
-            _http = http;
+            _obatService = obatService;
+            _pelangganService = pelangganService;
+            _pesananService = pesananService;
             InitializeComponent();
         }
 
@@ -75,12 +80,10 @@ namespace PROJECTKPL.GUI
             pnlSidebar.Controls.Add(lblJudul);
             pnlSidebar.Controls.Add(lblWelcome);
             pnlSidebar.Controls.Add(new Panel { Height = 10, Width = 200 });
-
             pnlSidebar.Controls.Add(btnObat);
             pnlSidebar.Controls.Add(btnPelanggan);
             pnlSidebar.Controls.Add(btnPesanan);
-
-            pnlSidebar.Controls.Add(new Panel { Height = 200, Width = 200 }); // dorong logout ke bawah
+            pnlSidebar.Controls.Add(new Panel { Height = 200, Width = 200 });
             pnlSidebar.Controls.Add(btnLogout);
 
             // ================= CONTENT =================
@@ -91,7 +94,7 @@ namespace PROJECTKPL.GUI
                 BackColor = Color.FromArgb(245, 247, 250)
             };
 
-            Label lblDefault = new Label
+            var lblDefault = new Label
             {
                 Text = "Pilih menu di sebelah kiri",
                 Font = new Font("Segoe UI", 14f),
@@ -99,29 +102,29 @@ namespace PROJECTKPL.GUI
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter
             };
-
             pnlContent.Controls.Add(lblDefault);
 
             Controls.Add(pnlSidebar);
             Controls.Add(pnlContent);
 
             // ================= EVENTS =================
+            // Teruskan service ke sub-form (Facade Pattern)
             btnObat.Click += (s, e) =>
             {
                 SetActive(btnObat);
-                LoadForm(new FormKelolaObat(_http));
+                LoadForm(new FormKelolaObat(_obatService));
             };
 
             btnPelanggan.Click += (s, e) =>
             {
                 SetActive(btnPelanggan);
-                LoadForm(new FormKelolaPelanggan(_http));
+                LoadForm(new FormKelolaPelanggan(_pelangganService));
             };
 
             btnPesanan.Click += (s, e) =>
             {
                 SetActive(btnPesanan);
-                LoadForm(new FormKelolaPesanan(_http));
+                LoadForm(new FormKelolaPesanan(_pesananService));
             };
 
             btnLogout.Click += (s, e) =>
@@ -134,7 +137,6 @@ namespace PROJECTKPL.GUI
             };
         }
 
-        // ================= BUTTON FACTORY =================
         private Button CreateButton(string text)
         {
             var btn = new Button
@@ -150,32 +152,24 @@ namespace PROJECTKPL.GUI
                 Cursor = Cursors.Hand,
                 Margin = new Padding(0, 5, 0, 0)
             };
-
             btn.FlatAppearance.BorderSize = 0;
             btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(51, 65, 85);
-
             return btn;
         }
 
-        // ================= NAVIGATION =================
         private void LoadForm(Form form)
         {
             foreach (Control c in pnlContent.Controls)
-            {
                 c.Dispose();
-            }
-
             pnlContent.Controls.Clear();
 
             form.TopLevel = false;
             form.FormBorderStyle = FormBorderStyle.None;
             form.Dock = DockStyle.Fill;
-
             pnlContent.Controls.Add(form);
             form.Show();
         }
 
-        // ================= ACTIVE STATE =================
         private void SetActive(Button btn)
         {
             if (activeButton != null)
